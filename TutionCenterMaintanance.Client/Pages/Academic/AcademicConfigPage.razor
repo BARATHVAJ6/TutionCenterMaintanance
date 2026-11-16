@@ -1,0 +1,320 @@
+@page "/academic-setup"
+@attribute [Authorize]
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+
+<PageTitle>Academic Setup - Tuition Center</PageTitle>
+
+<div class="mb-4">
+    <MudText Typo="Typo.h5" Class="fw-bold">Curriculum & Academic Structure</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary">Configure educational boards, subjects, grade curriculum mappings, and academic sessions</MudText>
+</div>
+
+<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" Color="Color.Primary" PanelClass="pa-4">
+    <!-- Tab 1: Educational Boards -->
+    <MudTabPanel Text="Boards" Icon="@Icons.Material.Filled.AccountBalance">
+        <div class="d-flex justify-space-between align-center mb-3">
+            <MudText Typo="Typo.h6">Educational Boards</MudText>
+            <div class="d-flex gap-2">
+                <MudTextField @bind-Value="_newBoardName" Placeholder="Board Name (e.g. Cambridge, IGCSE)" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddBoard" Disabled="string.IsNullOrWhiteSpace(_newBoardName)">
+                    Add Board
+                </MudButton>
+            </div>
+        </div>
+
+        <MudTable Items="@_boards" Dense="true" Hover="true" Striped="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>Board Name</MudTh>
+                <MudTh>Code</MudTh>
+                <MudTh>Status</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd><strong>@context.Name</strong></MudTd>
+                <MudTd>@(context.Code ?? "-")</MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">Active</MudChip>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudTabPanel>
+
+    <!-- Tab 2: Subjects -->
+    <MudTabPanel Text="Subjects" Icon="@Icons.Material.Filled.MenuBook">
+        <div class="d-flex justify-space-between align-center mb-3">
+            <MudText Typo="Typo.h6">Subjects Taught</MudText>
+            <div class="d-flex gap-2">
+                <MudTextField @bind-Value="_newSubjectName" Placeholder="Subject Name (e.g. Accountancy, French)" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddSubject" Disabled="string.IsNullOrWhiteSpace(_newSubjectName)">
+                    Add Subject
+                </MudButton>
+            </div>
+        </div>
+
+        <MudTable Items="@_subjects" Dense="true" Hover="true" Striped="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>Subject Name</MudTh>
+                <MudTh>Code</MudTh>
+                <MudTh>Status</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd><strong>@context.Name</strong></MudTd>
+                <MudTd>@(context.Code ?? "-")</MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">Active</MudChip>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudTabPanel>
+
+    <!-- Tab 3: Board-Grade Subject Mapping -->
+    <MudTabPanel Text="Curriculum Mapping" Icon="@Icons.Material.Filled.Hub">
+        <MudText Typo="Typo.subtitle1" Class="fw-bold mb-2">Map Subjects to Board & Grade</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+            Select an educational board and grade to assign which subjects belong to that combination.
+        </MudText>
+
+        <MudGrid Class="align-center mb-4">
+            <MudItem xs="12" sm="5">
+                <MudSelect T="int" Value="_mapBoardId" ValueChanged="OnMapBoardChanged" Label="Select Board" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var b in _boards)
+                    {
+                        <MudSelectItem Value="@b.Id">@b.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="5">
+                <MudSelect T="int" Value="_mapGradeId" ValueChanged="OnMapGradeChanged" Label="Select Grade" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var g in _grades)
+                    {
+                        <MudSelectItem Value="@g.Id">@g.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="2">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" OnClick="SaveMapping" Disabled="_savingMapping">
+                    Save Mapping
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+
+        <MudCard Outlined="true" Class="pa-4">
+            <MudText Typo="Typo.subtitle2" Class="fw-bold mb-3">Assigned Subjects for Selected Class:</MudText>
+            <MudGrid>
+                @foreach (var sub in _subjects)
+                {
+                    var isMapped = _selectedSubjectIds.Contains(sub.Id);
+                    <MudItem xs="12" sm="4" md="3">
+                        <MudCheckBox T="bool" Value="@isMapped" ValueChanged="@((bool val) => ToggleMappedSubject(sub.Id, val))" Color="Color.Primary">
+                            @sub.Name
+                        </MudCheckBox>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudCard>
+    </MudTabPanel>
+
+    <!-- Tab 4: Academic Years -->
+    <MudTabPanel Text="Academic Years" Icon="@Icons.Material.Filled.CalendarMonth">
+        <div class="d-flex justify-space-between align-center mb-3">
+            <MudText Typo="Typo.h6">Academic Years / Sessions</MudText>
+            <div class="d-flex gap-2">
+                <MudTextField @bind-Value="_newYearName" Placeholder="Session Name (e.g. 2027-2028)" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddYear" Disabled="string.IsNullOrWhiteSpace(_newYearName)">
+                    Add Session
+                </MudButton>
+            </div>
+        </div>
+
+        <MudTable Items="@_years" Dense="true" Hover="true" Striped="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>Academic Year</MudTh>
+                <MudTh>Period</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh Style="text-align: right;">Action</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd><strong>@context.Name</strong></MudTd>
+                <MudTd>@context.StartDate.ToString("MMM yyyy") - @context.EndDate.ToString("MMM yyyy")</MudTd>
+                <MudTd>
+                    @if (context.IsCurrent)
+                    {
+                        <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">Current Active Session</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Outlined">Archived</MudChip>
+                    }
+                </MudTd>
+                <MudTd Style="text-align: right;">
+                    @if (!context.IsCurrent)
+                    {
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="@(() => SetCurrentYear(context.Id))">
+                            Set as Current
+                        </MudButton>
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudTabPanel>
+</MudTabs>
+
+@code {
+    private List<BoardDto> _boards = new();
+    private List<GradeDto> _grades = new();
+    private List<SubjectDto> _subjects = new();
+    private List<AcademicYearDto> _years = new();
+
+    private string? _newBoardName;
+    private string? _newSubjectName;
+    private string? _newYearName;
+
+    private int _mapBoardId;
+    private int _mapGradeId;
+    private List<int> _selectedSubjectIds = new();
+    private bool _savingMapping = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAll();
+    }
+
+    private async Task LoadAll()
+    {
+        var bRes = await ApiService.GetBoardsAsync();
+        if (bRes?.Success == true && bRes.Data != null) _boards = bRes.Data;
+
+        var gRes = await ApiService.GetGradesAsync();
+        if (gRes?.Success == true && gRes.Data != null) _grades = gRes.Data;
+
+        var sRes = await ApiService.GetSubjectsAsync();
+        if (sRes?.Success == true && sRes.Data != null) _subjects = sRes.Data;
+
+        var yRes = await ApiService.GetAcademicYearsAsync();
+        if (yRes?.Success == true && yRes.Data != null) _years = yRes.Data;
+
+        _mapBoardId = _boards.FirstOrDefault()?.Id ?? 1;
+        _mapGradeId = _grades.FirstOrDefault()?.Id ?? 1;
+        await LoadMapping();
+    }
+
+    private async Task OnMapBoardChanged(int boardId)
+    {
+        _mapBoardId = boardId;
+        await LoadMapping();
+    }
+
+    private async Task OnMapGradeChanged(int gradeId)
+    {
+        _mapGradeId = gradeId;
+        await LoadMapping();
+    }
+
+    private async Task LoadMapping()
+    {
+        var res = await ApiService.GetBoardGradeMappingsAsync(_mapBoardId, _mapGradeId);
+        if (res?.Success == true && res.Data != null)
+        {
+            _selectedSubjectIds = res.Data.Select(m => m.SubjectId).ToList();
+        }
+        else
+        {
+            _selectedSubjectIds = new();
+        }
+    }
+
+    private void ToggleMappedSubject(int subId, bool isChecked)
+    {
+        if (isChecked && !_selectedSubjectIds.Contains(subId))
+        {
+            _selectedSubjectIds.Add(subId);
+        }
+        else if (!isChecked)
+        {
+            _selectedSubjectIds.Remove(subId);
+        }
+    }
+
+    private async Task SaveMapping()
+    {
+        _savingMapping = true;
+        try
+        {
+            var req = new ManageBoardGradeSubjectsRequest
+            {
+                BoardId = _mapBoardId,
+                GradeId = _mapGradeId,
+                SubjectIds = _selectedSubjectIds
+            };
+            var res = await ApiService.SaveBoardGradeMappingsAsync(req);
+            if (res?.Success == true)
+            {
+                Snackbar.Add("Curriculum subjects saved!", Severity.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _savingMapping = false;
+        }
+    }
+
+    private async Task AddBoard()
+    {
+        if (string.IsNullOrWhiteSpace(_newBoardName)) return;
+        var res = await ApiService.CreateBoardAsync(new BoardDto { Name = _newBoardName, IsActive = true });
+        if (res?.Success == true)
+        {
+            Snackbar.Add("Board added!", Severity.Success);
+            _newBoardName = null;
+            var bRes = await ApiService.GetBoardsAsync();
+            if (bRes?.Success == true && bRes.Data != null) _boards = bRes.Data;
+        }
+    }
+
+    private async Task AddSubject()
+    {
+        if (string.IsNullOrWhiteSpace(_newSubjectName)) return;
+        var res = await ApiService.CreateSubjectAsync(new SubjectDto { Name = _newSubjectName, IsActive = true });
+        if (res?.Success == true)
+        {
+            Snackbar.Add("Subject added!", Severity.Success);
+            _newSubjectName = null;
+            var sRes = await ApiService.GetSubjectsAsync();
+            if (sRes?.Success == true && sRes.Data != null) _subjects = sRes.Data;
+        }
+    }
+
+    private async Task AddYear()
+    {
+        if (string.IsNullOrWhiteSpace(_newYearName)) return;
+        var res = await ApiService.CreateAcademicYearAsync(new AcademicYearDto
+        {
+            Name = _newYearName,
+            StartDate = DateTime.Today,
+            EndDate = DateTime.Today.AddYears(1),
+            IsCurrent = false
+        });
+        if (res?.Success == true)
+        {
+            Snackbar.Add("Academic session added!", Severity.Success);
+            _newYearName = null;
+            var yRes = await ApiService.GetAcademicYearsAsync();
+            if (yRes?.Success == true && yRes.Data != null) _years = yRes.Data;
+        }
+    }
+
+    private async Task SetCurrentYear(int id)
+    {
+        var res = await ApiService.SetCurrentAcademicYearAsync(id);
+        if (res?.Success == true)
+        {
+            Snackbar.Add("Current active academic year set!", Severity.Success);
+            var yRes = await ApiService.GetAcademicYearsAsync();
+            if (yRes?.Success == true && yRes.Data != null) _years = yRes.Data;
+        }
+    }
+}

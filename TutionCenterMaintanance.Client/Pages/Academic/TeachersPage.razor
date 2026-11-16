@@ -1,0 +1,221 @@
+@page "/teachers"
+@attribute [Authorize]
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Teachers & Tutors - Tuition Center</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <div>
+        <MudText Typo="Typo.h5" Class="fw-bold">Faculty & Tutor Directory</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Manage teaching faculty, subject specializations, and contact information</MudText>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="OpenCreateDialog">
+        Add Teacher
+    </MudButton>
+</div>
+
+<MudCard Elevation="2" Class="rounded-lg overflow-hidden">
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+
+    <MudTable Items="@_teachers" Dense="true" Hover="true" Striped="true" Elevation="0">
+        <HeaderContent>
+            <MudTh>Teacher Name</MudTh>
+            <MudTh>Specialization / Subject</MudTh>
+            <MudTh>Contact Phone</MudTh>
+            <MudTh>Email</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh Style="text-align: right;">Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Name">
+                <div class="d-flex align-center">
+                    <MudAvatar Color="Color.Secondary" Size="Size.Small" Class="mr-2">
+                        @context.Name.Substring(0, 1).ToUpper()
+                    </MudAvatar>
+                    <MudText Typo="Typo.subtitle2" Class="fw-bold">@context.Name</MudText>
+                </div>
+            </MudTd>
+            <MudTd DataLabel="Specialization">
+                <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                    @(context.Specialization ?? "General Faculty")
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Phone">@(context.Phone ?? "-")</MudTd>
+            <MudTd DataLabel="Email">@(context.Email ?? "-")</MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">Active</MudChip>
+            </MudTd>
+            <MudTd Style="text-align: right;" DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" OnClick="@(() => OpenEditDialog(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteTeacher(context.Id, context.Name))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <div class="pa-8 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.Psychology" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+                <MudText Typo="Typo.h6">No teachers registered</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Add your teaching staff to assign them to batches and subjects.</MudText>
+            </div>
+        </NoRecordsContent>
+    </MudTable>
+</MudCard>
+
+<!-- Teacher Dialog -->
+<MudDialog @bind-Visible="_showDialog" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(_isEdit ? "Edit Teacher" : "Add Teacher")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_currentTeacher.Name" Label="Teacher Full Name *" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_currentTeacher.Specialization" Label="Subject Specialization" Placeholder="e.g. Mathematics, Physics, Chemistry" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_currentTeacher.Phone" Label="Phone Number" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_currentTeacher.Email" Label="Email Address" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveTeacher" Disabled="_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Save Teacher</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private List<TeacherDto> _teachers = new();
+    private bool _loading = true;
+    private bool _saving = false;
+    private bool _showDialog = false;
+    private bool _isEdit = false;
+    private TeacherDto _currentTeacher = new();
+    private DialogOptions _dialogOptions = new() { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTeachers();
+    }
+
+    private async Task LoadTeachers()
+    {
+        _loading = true;
+        try
+        {
+            var res = await ApiService.GetTeachersAsync();
+            if (res?.Success == true && res.Data != null)
+            {
+                _teachers = res.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading teachers: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OpenCreateDialog()
+    {
+        _isEdit = false;
+        _currentTeacher = new TeacherDto { IsActive = true };
+        _showDialog = true;
+    }
+
+    private void OpenEditDialog(TeacherDto t)
+    {
+        _isEdit = true;
+        _currentTeacher = new TeacherDto
+        {
+            Id = t.Id,
+            Name = t.Name,
+            Specialization = t.Specialization,
+            Phone = t.Phone,
+            Email = t.Email,
+            IsActive = t.IsActive
+        };
+        _showDialog = true;
+    }
+
+    private async Task SaveTeacher()
+    {
+        if (string.IsNullOrWhiteSpace(_currentTeacher.Name))
+        {
+            Snackbar.Add("Please enter teacher name.", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            if (_isEdit)
+            {
+                var res = await ApiService.UpdateTeacherAsync(_currentTeacher.Id, _currentTeacher);
+                if (res?.Success == true)
+                {
+                    Snackbar.Add("Teacher profile updated!", Severity.Success);
+                    _showDialog = false;
+                    await LoadTeachers();
+                }
+            }
+            else
+            {
+                var res = await ApiService.CreateTeacherAsync(_currentTeacher);
+                if (res?.Success == true)
+                {
+                    Snackbar.Add("Teacher registered successfully!", Severity.Success);
+                    _showDialog = false;
+                    await LoadTeachers();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task DeleteTeacher(int id, string name)
+    {
+        bool? confirmed = await DialogService.ShowMessageBoxAsync(
+            "Remove Teacher",
+            $"Are you sure you want to deactivate teacher '{name}'?",
+            yesText: "Remove", cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            var res = await ApiService.DeleteTeacherAsync(id);
+            if (res?.Success == true)
+            {
+                Snackbar.Add("Teacher record deactivated.", Severity.Success);
+                await LoadTeachers();
+            }
+        }
+    }
+}

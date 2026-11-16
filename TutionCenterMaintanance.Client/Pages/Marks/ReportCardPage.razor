@@ -1,0 +1,250 @@
+@page "/report-cards"
+@attribute [Authorize]
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Student Report Cards - Tuition Center</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4 d-print-none">
+    <div>
+        <MudText Typo="Typo.h5" Class="fw-bold">Student Performance & Report Cards</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Generate comprehensive academic transcripts combining school exams and tuition center tests</MudText>
+    </div>
+    <div class="d-flex gap-2">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Print" OnClick="PrintReportCard" Disabled="_reportCard == null">
+            Print Transcript
+        </MudButton>
+        @if (_reportCard != null && _selectedStudent != null && !string.IsNullOrEmpty(_selectedStudent.WhatsAppPhone))
+        {
+            var cleanPhone = _selectedStudent.WhatsAppPhone.Replace("+", "").Replace(" ", "").Replace("-", "");
+            var summaryText = $"Academic Performance Report for {_reportCard.StudentName} ({_reportCard.GradeName} - {_reportCard.BoardName}):\n";
+            foreach (var exam in _reportCard.Exams)
+            {
+                summaryText += $"• {exam.AssessmentName}: {exam.TotalObtained}/{exam.TotalMaximum} ({exam.Percentage}%)\n";
+            }
+            summaryText += "Bright Minds Tuition Center";
+
+            <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Custom.Brands.WhatsApp"
+                       Href="@($"https://wa.me/{cleanPhone}?text={Uri.EscapeDataString(summaryText)}")" Target="_blank">
+                WhatsApp to Parent
+            </MudButton>
+        }
+    </div>
+</div>
+
+<!-- Student Selector (Hidden in Print) -->
+<MudCard Elevation="1" Class="pa-4 mb-4 rounded-lg d-print-none">
+    <MudGrid Class="align-center">
+        <MudItem xs="12" sm="8">
+            <MudSelect T="int" Value="_selectedStudentId" ValueChanged="OnStudentChanged" Label="Select Student" Variant="Variant.Outlined" Margin="Margin.Dense">
+                @foreach (var s in _students)
+                {
+                    <MudSelectItem Value="@s.Id">@s.FullName (@s.GradeName - @s.BoardName) - Father: @s.FatherName</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" FullWidth="true" OnClick="LoadReportCard" Disabled="_selectedStudentId <= 0">
+                Load Report Card
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudCard>
+
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+}
+else if (_reportCard != null)
+{
+    <!-- Printable Report Card Paper Sheet -->
+    <MudPaper Elevation="4" Class="pa-8 rounded-lg mx-auto" Style="max-width: 900px; background-color: white; color: #1e293b;">
+        <!-- Header -->
+        <div class="text-center pb-4 mb-4 border-b-2" style="border-bottom: 2px solid #1E40AF;">
+            <MudText Typo="Typo.h4" Class="fw-bold" Style="color: #1E40AF;">@(_settings?.CenterName ?? "Bright Minds Tuition Center")</MudText>
+            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">@(_settings?.Tagline ?? "Excellence in Learning from UKG to Grade 12")</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@_settings?.Address • Phone: @_settings?.Phone</MudText>
+            <div class="mt-2">
+                <MudChip T="string" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small">
+                    OFFICIAL STUDENT PERFORMANCE TRANSCRIPT
+                </MudChip>
+            </div>
+        </div>
+
+        <!-- Student Details Grid -->
+        <MudCard Outlined="true" Class="pa-4 mb-6" Style="background-color: #f8fafc;">
+            <MudGrid>
+                <MudItem xs="6" sm="3">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">STUDENT NAME</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="fw-bold">@_reportCard.StudentName</MudText>
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">GRADE / CLASS</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="fw-bold">@_reportCard.GradeName</MudText>
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">EDUCATIONAL BOARD</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="fw-bold">@_reportCard.BoardName</MudText>
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">DATE OF ISSUE</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="fw-bold">@DateTime.Today.ToString("dd MMM yyyy")</MudText>
+                </MudItem>
+            </MudGrid>
+        </MudCard>
+
+        <!-- Exam Sections -->
+        @if (_reportCard.Exams?.Any() == true)
+        {
+            @foreach (var exam in _reportCard.Exams)
+            {
+                <div class="mb-6">
+                    <div class="d-flex justify-space-between align-center pa-2 px-3 rounded mb-2"
+                         style="background-color: @(exam.Category == AssessmentCategory.TuitionTest ? "#E0E7FF" : "#FEF3C7"); border-left: 4px solid @(exam.Category == AssessmentCategory.TuitionTest ? "#4338CA" : "#D97706");">
+                        <div>
+                            <MudText Typo="Typo.subtitle1" Class="fw-bold">@exam.AssessmentName</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @exam.AssessmentType (@exam.Category) • Date: @exam.Date.ToString("dd MMM yyyy")
+                            </MudText>
+                        </div>
+                        <div class="text-right">
+                            <MudText Typo="Typo.h6" Class="fw-bold">@exam.Percentage%</MudText>
+                            <MudText Typo="Typo.caption">Total: @exam.TotalObtained / @exam.TotalMaximum</MudText>
+                        </div>
+                    </div>
+
+                    <MudSimpleTable Dense="true" Hover="true" Bordered="true" Style="background: white;">
+                        <thead>
+                            <tr style="background-color: #f1f5f9;">
+                                <th>Subject</th>
+                                <th style="width: 140px; text-align: center;">Max Marks</th>
+                                <th style="width: 160px; text-align: center;">Marks Obtained</th>
+                                <th>Teacher Notes / Evaluation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var m in exam.Marks)
+                            {
+                                <tr>
+                                    <td><strong>@m.SubjectName</strong></td>
+                                    <td style="text-align: center;">@m.MaxMarks</td>
+                                    <td style="text-align: center;">
+                                        @if (m.IsAbsent)
+                                        {
+                                            <span style="color: #ef4444; font-weight: bold;">Absent</span>
+                                        }
+                                        else if (m.MarksObtained.HasValue)
+                                        {
+                                            <strong style="color: @(m.MarksObtained >= (m.MaxMarks * 0.4m) ? "#059669" : "#dc2626");">
+                                                @m.MarksObtained
+                                            </strong>
+                                        }
+                                        else
+                                        {
+                                            <span style="color: #94a3b8;">Pending</span>
+                                        }
+                                    </td>
+                                    <td>@(m.Remarks ?? "-")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="pa-8 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+                <MudText Typo="Typo.body1">No assessment records found for this student yet.</MudText>
+            </div>
+        }
+
+        <!-- Signature Block -->
+        <div class="d-flex justify-space-between mt-12 pt-8 border-t-2" style="border-top: 1px dashed #cbd5e1;">
+            <div class="text-center" style="width: 200px;">
+                <div style="border-bottom: 1px solid #64748b; height: 40px;"></div>
+                <MudText Typo="Typo.caption" Class="fw-bold mt-1 d-block">Center Director / Admin</MudText>
+            </div>
+            <div class="text-center" style="width: 200px;">
+                <div style="border-bottom: 1px solid #64748b; height: 40px;"></div>
+                <MudText Typo="Typo.caption" Class="fw-bold mt-1 d-block">Subject Tutor</MudText>
+            </div>
+            <div class="text-center" style="width: 200px;">
+                <div style="border-bottom: 1px solid #64748b; height: 40px;"></div>
+                <MudText Typo="Typo.caption" Class="fw-bold mt-1 d-block">Parent's Signature</MudText>
+            </div>
+        </div>
+    </MudPaper>
+}
+
+@code {
+    [SupplyParameterFromQuery]
+    public int? studentId { get; set; }
+
+    private List<StudentListItemDto> _students = new();
+    private StudentListItemDto? _selectedStudent;
+    private int _selectedStudentId;
+    private StudentReportCardDto? _reportCard;
+    private CenterSettingsDto? _settings;
+    private bool _loading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var setRes = await ApiService.GetSettingsAsync();
+        if (setRes?.Success == true) _settings = setRes.Data;
+
+        var stuRes = await ApiService.GetStudentsAsync(pageSize: 200);
+        if (stuRes?.Success == true && stuRes.Data != null)
+        {
+            _students = stuRes.Data.Items;
+        }
+
+        if (studentId.HasValue && studentId > 0)
+        {
+            _selectedStudentId = studentId.Value;
+            await LoadReportCard();
+        }
+        else if (_students.Any())
+        {
+            _selectedStudentId = _students.First().Id;
+            await LoadReportCard();
+        }
+    }
+
+    private async Task OnStudentChanged(int stuId)
+    {
+        _selectedStudentId = stuId;
+        await LoadReportCard();
+    }
+
+    private async Task LoadReportCard()
+    {
+        if (_selectedStudentId <= 0) return;
+
+        _selectedStudent = _students.FirstOrDefault(s => s.Id == _selectedStudentId);
+        _loading = true;
+        try
+        {
+            var res = await ApiService.GetReportCardAsync(_selectedStudentId);
+            if (res?.Success == true && res.Data != null)
+            {
+                _reportCard = res.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading report card: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task PrintReportCard()
+    {
+        await JSRuntime.InvokeVoidAsync("window.print");
+    }
+}

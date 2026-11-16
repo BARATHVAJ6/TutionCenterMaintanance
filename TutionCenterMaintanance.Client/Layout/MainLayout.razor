@@ -1,0 +1,268 @@
+@inherits LayoutComponentBase
+@using TutionCenterMaintanance.Client.Pages.Auth
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ILocalStorageService LocalStorage
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+
+<MudThemeProvider @ref="_mudThemeProvider" Theme="_customTheme" IsDarkMode="_isDarkMode" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<AuthorizeView>
+    <Authorized>
+        <MudLayout>
+            <MudAppBar Elevation="2" Color="Color.Primary" Dense="false">
+                <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@ToggleDrawer" />
+                <MudIcon Icon="@Icons.Material.Filled.School" Size="Size.Large" Class="mr-2" />
+                <MudText Typo="Typo.h6" Class="fw-bold">@(_settings?.CenterName ?? "Bright Minds Tuition")</MudText>
+                
+                @if (!string.IsNullOrEmpty(_settings?.Tagline))
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Class="d-none d-md-flex ml-3" Variant="Variant.Filled">
+                        @_settings.Tagline
+                    </MudChip>
+                }
+
+                <MudSpacer />
+
+                <!-- In-App Notification Bell Menu -->
+                <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
+                    <ActivatorContent Context="notifContext">
+                        <MudTooltip Text="Notifications & Alerts">
+                            <MudBadge Content="@_unreadCount" Visible="@(_unreadCount > 0)" Color="Color.Error" Overlap="true" Class="mx-2">
+                                <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit" />
+                            </MudBadge>
+                        </MudTooltip>
+                    </ActivatorContent>
+                    <ChildContent>
+                        <div style="width: 340px; max-width: 90vw;" class="pa-2">
+                            <div class="d-flex justify-space-between align-center px-2 py-1 border-bottom">
+                                <div class="d-flex align-center gap-1">
+                                    <MudText Typo="Typo.subtitle2" Class="fw-bold">Notifications</MudText>
+                                    @if (_unreadCount > 0)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Filled">@_unreadCount New</MudChip>
+                                    }
+                                </div>
+                                <div class="d-flex gap-1">
+                                    <MudTooltip Text="Scan & Generate System Alerts">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Sync" Size="Size.Small" Color="Color.Primary" OnClick="TriggerSystemAlerts" />
+                                    </MudTooltip>
+                                    @if (_unreadCount > 0)
+                                    {
+                                        <MudTooltip Text="Mark all as read">
+                                            <MudIconButton Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" Color="Color.Secondary" OnClick="MarkAllNotificationsRead" />
+                                        </MudTooltip>
+                                    }
+                                </div>
+                            </div>
+
+                            <div style="max-height: 320px; overflow-y: auto;" class="mt-2">
+                                @if (!_notifications.Any())
+                                {
+                                    <div class="pa-4 text-center">
+                                        <MudIcon Icon="@Icons.Material.Filled.NotificationsNone" Color="Color.Secondary" Size="Size.Medium" />
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mt-1">No notifications yet</MudText>
+                                    </div>
+                                }
+                                else
+                                {
+                                    @foreach (var n in _notifications)
+                                    {
+                                        <div class="pa-2 mb-1 rounded cursor-pointer"
+                                             style="background-color: @(n.IsRead ? "transparent" : "#f1f5f9"); border-left: 3px solid @GetNotifBorderColor(n.Type);"
+                                             @onclick="@(() => MarkAsRead(n.Id))">
+                                            <div class="d-flex align-center justify-space-between">
+                                                <MudText Typo="Typo.subtitle2" Class="fw-bold" Style="font-size: 0.8rem;">
+                                                    @n.Title
+                                                </MudText>
+                                                <span style="font-size: 0.68rem; color: #94a3b8;">
+                                                    @GetTimeAgo(n.CreatedAt)
+                                                </span>
+                                            </div>
+                                            <MudText Typo="Typo.caption" Style="color: #475569; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                                @n.Message
+                                            </MudText>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </ChildContent>
+                </MudMenu>
+
+                <MudTooltip Text="Toggle Dark Mode">
+                    <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                                   Color="Color.Inherit"
+                                   OnClick="@ToggleDarkMode" />
+                </MudTooltip>
+
+                <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                    <ActivatorContent Context="menuContext">
+                        <MudChip T="string" Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Surface" Variant="Variant.Filled" Class="cursor-pointer">
+                            @context.User.Identity?.Name
+                        </MudChip>
+                    </ActivatorContent>
+                    <ChildContent>
+                        <MudMenuItem Icon="@Icons.Material.Filled.Person">Role: @(context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "User")</MudMenuItem>
+                        <MudDivider />
+                        <MudMenuItem Icon="@Icons.Material.Filled.Settings" Href="/settings">Center Settings</MudMenuItem>
+                        <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="@HandleLogout">Logout</MudMenuItem>
+                    </ChildContent>
+                </MudMenu>
+            </MudAppBar>
+
+            <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="3" Variant="DrawerVariant.Responsive">
+                <NavMenu />
+            </MudDrawer>
+
+            <MudMainContent Class="pa-4 pt-6" Style="background-color: var(--mud-palette-background-grey); min-height: 100vh;">
+                @Body
+            </MudMainContent>
+        </MudLayout>
+    </Authorized>
+    <NotAuthorized>
+        <Login />
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private bool _drawerOpen = true;
+    private bool _isDarkMode = false;
+    private MudThemeProvider? _mudThemeProvider;
+    private CenterSettingsDto? _settings;
+    private int _unreadCount = 0;
+    private List<NotificationDto> _notifications = new();
+
+    private readonly MudTheme _customTheme = new()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#1E40AF",        // Deep royal indigo
+            Secondary = "#0D9488",      // Teal accent
+            AppbarBackground = "#1E40AF",
+            Background = "#F8FAFC",
+            BackgroundGray = "#F1F5F9",
+            Surface = "#FFFFFF",
+            DrawerBackground = "#FFFFFF",
+            Success = "#10B981",
+            Warning = "#F59E0B",
+            Error = "#EF4444",
+            Info = "#3B82F6"
+        },
+        PaletteDark = new PaletteDark()
+        {
+            Primary = "#3B82F6",
+            Secondary = "#14B8A6",
+            AppbarBackground = "#0F172A",
+            Background = "#0F172A",
+            Surface = "#1E293B",
+            DrawerBackground = "#1E293B",
+            Success = "#10B981",
+            Warning = "#F59E0B",
+            Error = "#EF4444",
+            Info = "#60A5FA"
+        },
+        Typography = new Typography()
+        {
+            Default = new DefaultTypography()
+            {
+                FontFamily = new[] { "Roboto", "Segoe UI", "sans-serif" }
+            }
+        }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var res = await ApiService.GetSettingsAsync();
+            if (res?.Success == true)
+            {
+                _settings = res.Data;
+            }
+
+            await LoadNotifications();
+        }
+        catch { }
+    }
+
+    private async Task LoadNotifications()
+    {
+        try
+        {
+            var countRes = await ApiService.GetUnreadNotificationCountAsync();
+            if (countRes?.Success == true && countRes.Data != null)
+            {
+                _unreadCount = countRes.Data.UnreadCount;
+            }
+
+            var notifRes = await ApiService.GetNotificationsAsync();
+            if (notifRes?.Success == true && notifRes.Data != null)
+            {
+                _notifications = notifRes.Data;
+            }
+        }
+        catch { }
+    }
+
+    private async Task MarkAsRead(int id)
+    {
+        await ApiService.MarkNotificationAsReadAsync(id);
+        var n = _notifications.FirstOrDefault(x => x.Id == id);
+        if (n != null && !n.IsRead)
+        {
+            n.IsRead = true;
+            _unreadCount = Math.Max(0, _unreadCount - 1);
+        }
+    }
+
+    private async Task MarkAllNotificationsRead()
+    {
+        await ApiService.MarkAllNotificationsAsReadAsync();
+        foreach (var n in _notifications) n.IsRead = true;
+        _unreadCount = 0;
+        Snackbar.Add("All notifications marked as read", Severity.Info);
+    }
+
+    private async Task TriggerSystemAlerts()
+    {
+        var res = await ApiService.GenerateSystemAlertsAsync();
+        if (res?.Success == true)
+        {
+            Snackbar.Add($"Alert scan complete: {res.Data} new notification(s) generated", Severity.Success);
+            await LoadNotifications();
+        }
+    }
+
+    private static string GetNotifBorderColor(string type) => type switch
+    {
+        "Success" => "#10B981",
+        "Warning" => "#F59E0B",
+        "Error" => "#EF4444",
+        _ => "#3B82F6"
+    };
+
+    private static string GetTimeAgo(DateTime dt)
+    {
+        var span = DateTime.UtcNow - dt;
+        if (span.TotalMinutes < 2) return "Just now";
+        if (span.TotalHours < 1) return $"{(int)span.TotalMinutes}m ago";
+        if (span.TotalDays < 1) return $"{(int)span.TotalHours}h ago";
+        return dt.ToString("dd MMM");
+    }
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+    private void ToggleDarkMode() => _isDarkMode = !_isDarkMode;
+
+    private async Task HandleLogout()
+    {
+        await LocalStorage.RemoveItemAsync("authToken");
+        ((CustomAuthStateProvider)AuthStateProvider).NotifyUserLogout();
+        Snackbar.Add("Logged out successfully.", Severity.Info);
+        Navigation.NavigateTo("/login");
+    }
+}

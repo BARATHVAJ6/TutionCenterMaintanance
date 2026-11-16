@@ -1,0 +1,286 @@
+@page "/students"
+@attribute [Authorize]
+@inject IApiService ApiService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>Student Records - Tuition Center</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <div>
+        <MudText Typo="Typo.h5" Class="fw-bold">Student Directory</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Comprehensive records of all enrolled students (UKG to Grade 12)</MudText>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="OpenAddStudentDialog">
+        Enroll Student
+    </MudButton>
+</div>
+
+<!-- Filters Bar -->
+<MudCard Elevation="1" Class="pa-4 mb-4 rounded-lg">
+    <MudGrid>
+        <MudItem xs="12" sm="4">
+            <MudTextField @bind-Value="_searchQuery"
+                          Label="Search student, school, father, phone..."
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Adornment="Adornment.End"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          OnAdornmentClick="ApplyFilters"
+                          Immediate="false"
+                          OnKeyDown="@(e => { if (e.Key == "Enter") ApplyFilters(); })" />
+        </MudItem>
+        <MudItem xs="6" sm="2">
+            <MudSelect T="int?" @bind-Value="_selectedGradeId" Label="Grade" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                @foreach (var g in _grades)
+                {
+                    <MudSelectItem T="int?" Value="@g.Id">@g.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="6" sm="2">
+            <MudSelect T="int?" @bind-Value="_selectedBoardId" Label="Board" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                @foreach (var b in _boards)
+                {
+                    <MudSelectItem T="int?" Value="@b.Id">@b.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="6" sm="2">
+            <MudSelect T="int?" @bind-Value="_selectedBatchId" Label="Batch" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                @foreach (var b in _batches)
+                {
+                    <MudSelectItem T="int?" Value="@b.Id">@b.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="6" sm="2" Class="d-flex align-center gap-2">
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" FullWidth="true" OnClick="ApplyFilters">
+                Filter
+            </MudButton>
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="ResetFilters" Title="Reset" />
+        </MudItem>
+    </MudGrid>
+</MudCard>
+
+<!-- Students Data Table -->
+<MudCard Elevation="2" Class="rounded-lg overflow-hidden">
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+
+    <MudTable Items="@_students" Dense="true" Hover="true" Striped="true" Elevation="0">
+        <HeaderContent>
+            <MudTh>Student Name</MudTh>
+            <MudTh>Grade & Board</MudTh>
+            <MudTh>School</MudTh>
+            <MudTh>Father / Guardian</MudTh>
+            <MudTh>Phone</MudTh>
+            <MudTh>Batches</MudTh>
+            <MudTh Style="text-align: right;">Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Student Name">
+                <div class="d-flex align-center">
+                    <MudAvatar Color="Color.Primary" Size="Size.Small" Class="mr-2">
+                        @context.FullName.Substring(0, 1).ToUpper()
+                    </MudAvatar>
+                    <div>
+                        <MudText Typo="Typo.subtitle2" Class="fw-bold">@context.FullName</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">ID: #@context.Id</MudText>
+                    </div>
+                </div>
+            </MudTd>
+            <MudTd DataLabel="Grade & Board">
+                <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">@context.GradeName</MudChip>
+                <MudChip T="string" Size="Size.Small" Color="Color.Surface" Variant="Variant.Text">@context.BoardName</MudChip>
+            </MudTd>
+            <MudTd DataLabel="School">
+                <MudText Typo="Typo.body2">@context.SchoolName</MudText>
+            </MudTd>
+            <MudTd DataLabel="Father">
+                <MudText Typo="Typo.body2">@context.FatherName</MudText>
+            </MudTd>
+            <MudTd DataLabel="Phone">
+                <div class="d-flex align-center gap-1">
+                    <MudText Typo="Typo.body2">@context.PrimaryPhone</MudText>
+                    @if (!string.IsNullOrEmpty(context.WhatsAppPhone))
+                    {
+                        var cleanPhone = context.WhatsAppPhone.Replace("+", "").Replace(" ", "").Replace("-", "");
+                        <MudIconButton Icon="@Icons.Custom.Brands.WhatsApp"
+                                       Color="Color.Success"
+                                       Size="Size.Small"
+                                       Href="@($"https://wa.me/{cleanPhone}?text={Uri.EscapeDataString($"Hello from Bright Minds Tuition Center regarding {context.FullName}:")}")"
+                                       Target="_blank"
+                                       Title="Send WhatsApp Message" />
+                    }
+                </div>
+            </MudTd>
+            <MudTd DataLabel="Batches">
+                @if (context.BatchNames?.Any() == true)
+                {
+                    @foreach (var b in context.BatchNames)
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Default" Class="mr-1 mb-1">@b</MudChip>
+                    }
+                }
+                else
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">No batch</MudText>
+                }
+            </MudTd>
+            <MudTd Style="text-align: right;" DataLabel="Actions">
+                <MudTooltip Text="Report Card">
+                    <MudIconButton Icon="@Icons.Material.Filled.Assessment" Size="Size.Small" Color="Color.Info" OnClick="@(() => Navigation.NavigateTo($"/report-cards?studentId={context.Id}"))" />
+                </MudTooltip>
+                <MudTooltip Text="Edit Profile">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" OnClick="@(() => OpenEditStudentDialog(context.Id))" />
+                </MudTooltip>
+                <MudTooltip Text="Deactivate">
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => ConfirmDelete(context.Id, context.FullName))" />
+                </MudTooltip>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <div class="pa-8 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.PersonOff" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+                <MudText Typo="Typo.h6">No students found</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Try adjusting your search criteria or register a new student.</MudText>
+            </div>
+        </NoRecordsContent>
+        <PagerContent>
+            <div class="d-flex justify-space-between align-center pa-4">
+                <MudText Typo="Typo.caption">Total: @_totalCount students</MudText>
+                <MudPagination Selected="_currentPage" SelectedChanged="OnPageChanged" Count="_totalPages" Color="Color.Primary" />
+            </div>
+        </PagerContent>
+    </MudTable>
+</MudCard>
+
+@code {
+    private List<StudentListItemDto> _students = new();
+    private List<GradeDto> _grades = new();
+    private List<BoardDto> _boards = new();
+    private List<BatchDto> _batches = new();
+    private bool _loading = true;
+
+    private string? _searchQuery;
+    private int? _selectedGradeId;
+    private int? _selectedBoardId;
+    private int? _selectedBatchId;
+    private int _currentPage = 1;
+    private int _pageSize = 15;
+    private int _totalCount = 0;
+    private int _totalPages => (int)Math.Ceiling((double)_totalCount / Math.Max(1, _pageSize));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLookups();
+        await LoadStudents();
+    }
+
+    private async Task LoadLookups()
+    {
+        var gRes = await ApiService.GetGradesAsync();
+        if (gRes?.Success == true && gRes.Data != null) _grades = gRes.Data;
+
+        var bRes = await ApiService.GetBoardsAsync();
+        if (bRes?.Success == true && bRes.Data != null) _boards = bRes.Data;
+
+        var btRes = await ApiService.GetBatchesAsync();
+        if (btRes?.Success == true && btRes.Data != null) _batches = btRes.Data;
+    }
+
+    private async Task LoadStudents()
+    {
+        _loading = true;
+        try
+        {
+            var res = await ApiService.GetStudentsAsync(
+                _searchQuery, _selectedGradeId, _selectedBoardId, _selectedBatchId, true, _currentPage, _pageSize);
+
+            if (res?.Success == true && res.Data != null)
+            {
+                _students = res.Data.Items;
+                _totalCount = res.Data.TotalCount;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading students: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ApplyFilters()
+    {
+        _currentPage = 1;
+        await LoadStudents();
+    }
+
+    private async Task ResetFilters()
+    {
+        _searchQuery = null;
+        _selectedGradeId = null;
+        _selectedBoardId = null;
+        _selectedBatchId = null;
+        _currentPage = 1;
+        await LoadStudents();
+    }
+
+    private async Task OnPageChanged(int newPage)
+    {
+        _currentPage = newPage;
+        await LoadStudents();
+    }
+
+    private async Task OpenAddStudentDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<StudentDialog>("Enroll New Student", options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled)
+        {
+            await LoadStudents();
+        }
+    }
+
+    private async Task OpenEditStudentDialog(int studentId)
+    {
+        var parameters = new DialogParameters<StudentDialog> { { x => x.StudentId, studentId } };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<StudentDialog>("Edit Student", parameters, options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled)
+        {
+            await LoadStudents();
+        }
+    }
+
+    private async Task ConfirmDelete(int studentId, string studentName)
+    {
+        bool? confirmed = await DialogService.ShowMessageBoxAsync(
+            "Deactivate Student Record",
+            $"Are you sure you want to deactivate student '{studentName}'? Their historical records and marks will be preserved.",
+            yesText: "Deactivate", cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            var res = await ApiService.DeleteStudentAsync(studentId);
+            if (res?.Success == true)
+            {
+                Snackbar.Add("Student deactivated successfully.", Severity.Success);
+                await LoadStudents();
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to deactivate student.", Severity.Error);
+            }
+        }
+    }
+}

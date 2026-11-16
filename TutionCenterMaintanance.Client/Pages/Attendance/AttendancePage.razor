@@ -1,0 +1,218 @@
+@page "/attendance"
+@attribute [Authorize]
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+
+<PageTitle>Daily Attendance - Tuition Center</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <div>
+        <MudText Typo="Typo.h5" Class="fw-bold">Daily Attendance Management</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Mark and monitor daily student attendance by batch or grade</MudText>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveAttendance" Disabled="_saving || !_sheet.Students.Any()">
+        @if (_saving)
+        {
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            <span>Saving...</span>
+        }
+        else
+        {
+            <span>Save Attendance</span>
+        }
+    </MudButton>
+</div>
+
+<!-- Date & Filters Bar -->
+<MudCard Elevation="1" Class="pa-4 mb-4 rounded-lg">
+    <MudGrid Class="align-center">
+        <MudItem xs="12" sm="4">
+            <MudDatePicker Date="_selectedDate" DateChanged="OnDateChanged" Label="Attendance Date" Variant="Variant.Outlined" Margin="Margin.Dense"
+                           MaxDate="DateTime.Today" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect T="int?" Value="_selectedBatchId" ValueChanged="OnBatchChanged" Label="Batch / Class Group" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                @foreach (var b in _batches)
+                {
+                    <MudSelectItem T="int?" Value="@b.Id">@b.Name (@b.GradeName - @b.BoardName)</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4" Class="d-flex justify-end gap-2">
+            <MudButton Variant="Variant.Outlined" Color="Color.Success" Size="Size.Small" StartIcon="@Icons.Material.Filled.DoneAll" OnClick="MarkAllPresent" Disabled="!_sheet.Students.Any()">
+                All Present
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" StartIcon="@Icons.Material.Filled.Close" OnClick="MarkAllAbsent" Disabled="!_sheet.Students.Any()">
+                All Absent
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudCard>
+
+<!-- Attendance Metrics -->
+@if (_sheet.Students.Any())
+{
+    var presentCount = _sheet.Students.Count(s => s.Status == AttendanceStatus.Present);
+    var absentCount = _sheet.Students.Count(s => s.Status == AttendanceStatus.Absent);
+    var pct = _sheet.Students.Count > 0 ? Math.Round(((decimal)presentCount / _sheet.Students.Count) * 100, 1) : 0;
+
+    <div class="d-flex gap-3 mb-4">
+        <MudChip T="string" Color="Color.Default" Variant="Variant.Filled">Total: @_sheet.Students.Count Students</MudChip>
+        <MudChip T="string" Color="Color.Success" Variant="Variant.Filled">Present: @presentCount</MudChip>
+        <MudChip T="string" Color="Color.Error" Variant="Variant.Filled">Absent: @absentCount</MudChip>
+        <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined">Rate: @pct%</MudChip>
+    </div>
+}
+
+<!-- Attendance Table -->
+<MudCard Elevation="2" Class="rounded-lg overflow-hidden">
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+
+    <MudTable Items="@_sheet.Students" Dense="true" Hover="true" Striped="true" Elevation="0">
+        <HeaderContent>
+            <MudTh>#</MudTh>
+            <MudTh>Student Name</MudTh>
+            <MudTh>Grade</MudTh>
+            <MudTh Style="width: 280px; text-align: center;">Status</MudTh>
+            <MudTh>Remarks</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.StudentId</MudTd>
+            <MudTd>
+                <MudText Typo="Typo.subtitle2" Class="fw-bold">@context.StudentName</MudText>
+            </MudTd>
+            <MudTd>
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">@context.GradeName</MudChip>
+            </MudTd>
+            <MudTd Style="text-align: center;">
+                <MudButtonGroup Variant="Variant.Filled" Size="Size.Small">
+                    <MudButton Color="@(context.Status == AttendanceStatus.Present ? Color.Success : Color.Default)"
+                               OnClick="@(() => context.Status = AttendanceStatus.Present)">
+                        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="mr-1" /> Present
+                    </MudButton>
+                    <MudButton Color="@(context.Status == AttendanceStatus.Absent ? Color.Error : Color.Default)"
+                               OnClick="@(() => context.Status = AttendanceStatus.Absent)">
+                        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" Class="mr-1" /> Absent
+                    </MudButton>
+                </MudButtonGroup>
+            </MudTd>
+            <MudTd>
+                <MudTextField @bind-Value="context.Remarks" Placeholder="Optional notes (e.g. sick leave, late)"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <div class="pa-8 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.EventBusy" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+                <MudText Typo="Typo.h6">No students to display</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Please select a batch or ensure students are enrolled in the system.</MudText>
+            </div>
+        </NoRecordsContent>
+    </MudTable>
+</MudCard>
+
+@code {
+    private DateTime? _selectedDate = DateTime.Today;
+    private int? _selectedBatchId;
+    private List<BatchDto> _batches = new();
+    private BatchAttendanceSheetDto _sheet = new();
+    private bool _loading = true;
+    private bool _saving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var bRes = await ApiService.GetBatchesAsync();
+        if (bRes?.Success == true && bRes.Data != null)
+        {
+            _batches = bRes.Data;
+            _selectedBatchId = _batches.FirstOrDefault()?.Id;
+        }
+
+        await LoadAttendanceSheet();
+    }
+
+    private async Task OnDateChanged(DateTime? newDate)
+    {
+        _selectedDate = newDate;
+        await LoadAttendanceSheet();
+    }
+
+    private async Task OnBatchChanged(int? newBatchId)
+    {
+        _selectedBatchId = newBatchId;
+        await LoadAttendanceSheet();
+    }
+
+    private async Task LoadAttendanceSheet()
+    {
+        _loading = true;
+        try
+        {
+            var date = _selectedDate ?? DateTime.Today;
+            var res = await ApiService.GetAttendanceSheetAsync(date, _selectedBatchId);
+            if (res?.Success == true && res.Data != null)
+            {
+                _sheet = res.Data;
+            }
+            else
+            {
+                _sheet = new BatchAttendanceSheetDto { Date = date };
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading attendance: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void MarkAllPresent()
+    {
+        foreach (var s in _sheet.Students) s.Status = AttendanceStatus.Present;
+    }
+
+    private void MarkAllAbsent()
+    {
+        foreach (var s in _sheet.Students) s.Status = AttendanceStatus.Absent;
+    }
+
+    private async Task SaveAttendance()
+    {
+        if (!_sheet.Students.Any()) return;
+
+        _saving = true;
+        try
+        {
+            var req = new SaveDailyAttendanceRequest
+            {
+                Date = _selectedDate ?? DateTime.Today,
+                BatchId = _selectedBatchId,
+                AttendanceList = _sheet.Students
+            };
+
+            var res = await ApiService.SaveAttendanceAsync(req);
+            if (res?.Success == true)
+            {
+                Snackbar.Add("Attendance recorded successfully!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to save attendance.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving attendance: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

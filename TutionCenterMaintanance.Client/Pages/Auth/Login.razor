@@ -1,0 +1,119 @@
+@page "/login"
+@attribute [AllowAnonymous]
+@inject IApiService ApiService
+@inject ILocalStorageService LocalStorage
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<div class="d-flex justify-center align-center" style="min-height: 80vh;">
+    <MudCard Elevation="6" Style="width: 100%; max-width: 440px; border-radius: 16px; overflow: hidden;">
+        <div class="pa-6 text-center" style="background: linear-gradient(135deg, #1E40AF 0%, #0D9488 100%); color: white;">
+            <MudIcon Icon="@Icons.Material.Filled.School" Size="Size.Large" Class="mb-2" />
+            <MudText Typo="Typo.h5" Class="fw-bold">Bright Minds Tuition</MudText>
+            <MudText Typo="Typo.body2" Class="opacity-75">Sign in to manage tuition center operations</MudText>
+        </div>
+
+        <MudCardContent Class="pa-6">
+            <EditForm Model="@_loginModel" OnValidSubmit="HandleLogin">
+                <DataAnnotationsValidator />
+
+                <MudTextField @bind-Value="_loginModel.UserName"
+                              Label="Username or Email"
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Person"
+                              Margin="Margin.Dense"
+                              Class="mb-4"
+                              For="@(() => _loginModel.UserName)" />
+
+                <MudTextField @bind-Value="_loginModel.Password"
+                              Label="Password"
+                              Variant="Variant.Outlined"
+                              InputType="@_passwordInputType"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@_passwordIcon"
+                              OnAdornmentClick="TogglePasswordVisibility"
+                              Margin="Margin.Dense"
+                              Class="mb-4"
+                              For="@(() => _loginModel.Password)" />
+
+                @if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">
+                        @_errorMessage
+                    </MudAlert>
+                }
+
+                <MudButton ButtonType="ButtonType.Submit"
+                           Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           FullWidth="true"
+                           Size="Size.Large"
+                           Disabled="_loading"
+                           Class="mt-2 py-2">
+                    @if (_loading)
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <span class="ms-2">Signing in...</span>
+                    }
+                    else
+                    {
+                        <span>Sign In</span>
+                    }
+                </MudButton>
+            </EditForm>
+
+            <MudDivider Class="my-4" />
+
+            <div class="pa-3 rounded" style="background-color: var(--mud-palette-background-grey); font-size: 0.85rem;">
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block fw-bold mb-1">
+                    Default Credentials:
+                </MudText>
+                <div><strong>Username:</strong> <code>admin</code></div>
+                <div><strong>Password:</strong> <code>Admin@123</code></div>
+            </div>
+        </MudCardContent>
+    </MudCard>
+</div>
+
+@code {
+    private readonly LoginRequest _loginModel = new() { UserName = "admin", Password = "Admin@123" };
+    private bool _loading = false;
+    private string? _errorMessage;
+    private bool _showPassword = false;
+    private InputType _passwordInputType => _showPassword ? InputType.Text : InputType.Password;
+    private string _passwordIcon => _showPassword ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
+
+    private void TogglePasswordVisibility() => _showPassword = !_showPassword;
+
+    private async Task HandleLogin()
+    {
+        _loading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var res = await ApiService.LoginAsync(_loginModel);
+            if (res?.Success == true && res.Data != null)
+            {
+                await LocalStorage.SetItemAsync("authToken", res.Data.Token);
+                ((CustomAuthStateProvider)AuthStateProvider).NotifyUserAuthentication(res.Data.Token);
+                Snackbar.Add($"Welcome back, {res.Data.User.FullName}!", Severity.Success);
+                Navigation.NavigateTo("/", forceLoad: false);
+            }
+            else
+            {
+                _errorMessage = res?.Message ?? "Invalid username or password.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Connection error: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

@@ -1,0 +1,108 @@
+@page "/settings"
+@attribute [Authorize]
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+
+<PageTitle>Center Settings - Tuition Center</PageTitle>
+
+<div class="mb-4">
+    <MudText Typo="Typo.h5" Class="fw-bold">Tuition Center Profile & Branding</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary">Customize institution identity, contact details, currency, and report headers</MudText>
+</div>
+
+<MudCard Elevation="2" Class="pa-6 rounded-lg mx-auto" Style="max-width: 800px;">
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+    }
+
+    <MudGrid>
+        <MudItem xs="12">
+            <MudTextField @bind-Value="_settings.CenterName" Label="Tuition Center Name *" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudTextField @bind-Value="_settings.Tagline" Label="Center Tagline / Motto" Placeholder="e.g. Excellence in Learning from UKG to Grade 12" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudTextField @bind-Value="_settings.Address" Label="Center Physical Address *" Required="true" Lines="2" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_settings.Phone" Label="Official Phone Number *" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_settings.Email" Label="Official Contact Email *" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_settings.Website" Label="Website URL" Placeholder="https://www.brightminds.com" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_settings.CurrencySymbol" Label="Currency Symbol" Placeholder="₹" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudItem>
+    </MudGrid>
+
+    <div class="d-flex justify-end mt-6">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveSettings" Disabled="_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Save Settings</span>
+            }
+        </MudButton>
+    </div>
+</MudCard>
+
+@code {
+    private CenterSettingsDto _settings = new();
+    private bool _loading = true;
+    private bool _saving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        try
+        {
+            var res = await ApiService.GetSettingsAsync();
+            if (res?.Success == true && res.Data != null)
+            {
+                _settings = res.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task SaveSettings()
+    {
+        _saving = true;
+        try
+        {
+            var res = await ApiService.UpdateSettingsAsync(_settings);
+            if (res?.Success == true)
+            {
+                Snackbar.Add("Center profile updated successfully!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to save settings.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

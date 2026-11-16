@@ -1,0 +1,391 @@
+@page "/reports"
+@attribute [Authorize]
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<PageTitle>Performance Analytics & Reports - Tuition Center</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <div>
+        <MudText Typo="Typo.h5" Class="fw-bold">Academic Reports & Deep Analytics</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Subject comparisons, batch rankings, student progress trends, and attendance correlation</MudText>
+    </div>
+    <div class="d-flex gap-2">
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Print" OnClick="PrintReport">
+            Print Report
+        </MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="RefreshReports">
+            Refresh Data
+        </MudButton>
+    </div>
+</div>
+
+<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" Color="Color.Primary" TabPanelsClass="pa-4">
+    <!-- Tab 1: Subject Performance Comparison -->
+    <MudTabPanel Text="Subject Comparison" Icon="@Icons.Material.Filled.AutoStories">
+        <MudCard Elevation="0" Outlined="true" Class="pa-4 mb-4">
+            <MudText Typo="Typo.subtitle1" Class="fw-bold mb-3">
+                Subject-Wise Academic Performance & Pass Rates
+            </MudText>
+            @if (_loadingSubjects)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-3" />
+            }
+            else
+            {
+                <MudTable Items="_subjectComparisons" Dense="true" Hover="true" Striped="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Subject</MudTh>
+                        <MudTh Style="text-align: center;">Tests Count</MudTh>
+                        <MudTh Style="text-align: center;">Evaluations</MudTh>
+                        <MudTh Style="text-align: right;">Average Score</MudTh>
+                        <MudTh Style="text-align: right;">Highest</MudTh>
+                        <MudTh Style="text-align: right;">Lowest</MudTh>
+                        <MudTh>Pass Rate (>=40%)</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Subject" Class="fw-bold">@context.SubjectName</MudTd>
+                        <MudTd DataLabel="Tests" Style="text-align: center;">@context.TotalAssessmentsEvaluated</MudTd>
+                        <MudTd DataLabel="Evaluations" Style="text-align: center;">@context.TotalStudentsEvaluated</MudTd>
+                        <MudTd DataLabel="Average" Style="text-align: right; font-weight: 700; color: #1e40af;">
+                            @context.AverageScorePercentage%
+                        </MudTd>
+                        <MudTd DataLabel="Highest" Style="text-align: right; color: #166534; font-weight: 600;">
+                            @context.HighestScorePercentage%
+                        </MudTd>
+                        <MudTd DataLabel="Lowest" Style="text-align: right; color: #b91c1c;">
+                            @context.LowestScorePercentage%
+                        </MudTd>
+                        <MudTd DataLabel="Pass Rate">
+                            <div class="d-flex align-center gap-2">
+                                <MudProgressLinear Color="@(context.PassPercentage >= 80 ? Color.Success : context.PassPercentage >= 60 ? Color.Warning : Color.Error)"
+                                                   Value="@((double)context.PassPercentage)" Size="Size.Medium" Rounded="true" Style="min-width: 90px;" />
+                                <span style="font-weight: 700; font-size: 0.8rem;">@context.PassPercentage%</span>
+                            </div>
+                        </MudTd>
+                    </RowTemplate>
+                    <NoRecordsContent>
+                        <div class="pa-6 text-center">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">No subject evaluations recorded yet.</MudText>
+                        </div>
+                    </NoRecordsContent>
+                </MudTable>
+            }
+        </MudCard>
+    </MudTabPanel>
+
+    <!-- Tab 2: Batch Performance & Ranking -->
+    <MudTabPanel Text="Batch Performance" Icon="@Icons.Material.Filled.Groups">
+        <MudCard Elevation="0" Outlined="true" Class="pa-4 mb-4">
+            <MudText Typo="Typo.subtitle1" Class="fw-bold mb-3">
+                Batch-Wise Academic Score & Attendance Ranking
+            </MudText>
+            @if (_loadingBatches)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-3" />
+            }
+            else
+            {
+                <MudTable Items="_batchComparisons" Dense="true" Hover="true" Striped="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Batch Name</MudTh>
+                        <MudTh>Grade & Board</MudTh>
+                        <MudTh Style="text-align: center;">Students</MudTh>
+                        <MudTh Style="text-align: right;">Academic Average</MudTh>
+                        <MudTh Style="text-align: right;">Attendance Rate</MudTh>
+                        <MudTh>Top Performer</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Batch" Class="fw-bold">@context.BatchName</MudTd>
+                        <MudTd DataLabel="Grade">@context.GradeName (@context.BoardName)</MudTd>
+                        <MudTd DataLabel="Students" Style="text-align: center;">@context.StudentCount</MudTd>
+                        <MudTd DataLabel="Academic Avg" Style="text-align: right;">
+                            <strong style="color: #1e40af; font-size: 0.95rem;">@context.AverageAcademicScore%</strong>
+                        </MudTd>
+                        <MudTd DataLabel="Attendance" Style="text-align: right;">
+                            <span style="font-weight: 700; color: @(context.AverageAttendancePercentage >= 80 ? "#166534" : "#b91c1c");">
+                                @context.AverageAttendancePercentage%
+                            </span>
+                        </MudTd>
+                        <MudTd DataLabel="Top Performer">
+                            <div class="d-flex align-center gap-1">
+                                <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Warning" Size="Size.Small" />
+                                <div>
+                                    <span class="fw-bold">@context.TopPerformerName</span>
+                                    @if (context.TopPerformerScore > 0)
+                                    {
+                                        <span style="font-size: 0.75rem; color: #166534; font-weight: 600; margin-left: 4px;">(@context.TopPerformerScore%)</span>
+                                    }
+                                </div>
+                            </div>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudCard>
+    </MudTabPanel>
+
+    <!-- Tab 3: Student Progress Trend Over Time -->
+    <MudTabPanel Text="Student Progress Trend" Icon="@Icons.Material.Filled.Timeline">
+        <MudCard Elevation="0" Outlined="true" Class="pa-4 mb-4">
+            <div class="d-flex align-center gap-3 mb-4 flex-wrap">
+                <MudSelect T="int" Value="_selectedStudentId" ValueChanged="OnStudentChanged" Label="Select Student" Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width: 250px;">
+                    @foreach (var s in _students)
+                    {
+                        <MudSelectItem Value="@s.Id">@s.FullName (@s.GradeName)</MudSelectItem>
+                    }
+                </MudSelect>
+                @if (_studentTrend != null)
+                {
+                    <MudChip T="string" Color="Color.Success" Variant="Variant.Filled" Size="Size.Medium">
+                        Overall Test Average: @_studentTrend.OverallAveragePercentage%
+                    </MudChip>
+                }
+            </div>
+
+            @if (_loadingTrend)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-3" />
+            }
+            else if (_studentTrend == null || !_studentTrend.TrendPoints.Any())
+            {
+                <div class="pa-6 text-center">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+                    <MudText Typo="Typo.body1" Color="Color.Secondary">No evaluated assessments found for this student.</MudText>
+                </div>
+            }
+            else
+            {
+                <MudTable Items="_studentTrend.TrendPoints" Dense="true" Hover="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Test Name</MudTh>
+                        <MudTh>Category</MudTh>
+                        <MudTh>Date</MudTh>
+                        <MudTh Style="text-align: right;">Marks Obtained</MudTh>
+                        <MudTh Style="text-align: right;">Student Score</MudTh>
+                        <MudTh Style="text-align: right;">Class Average</MudTh>
+                        <MudTh>Performance Benchmark</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Test" Class="fw-bold">@context.AssessmentName</MudTd>
+                        <MudTd DataLabel="Type">
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
+                                @context.AssessmentTypeName
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Date">@context.Date.ToString("dd MMM yyyy")</MudTd>
+                        <MudTd DataLabel="Marks" Style="text-align: right;">
+                            @context.MarksObtained / @context.MaxMarks
+                        </MudTd>
+                        <MudTd DataLabel="Student %" Style="text-align: right; font-weight: 700; color: #166534; font-size: 0.95rem;">
+                            @context.Percentage%
+                        </MudTd>
+                        <MudTd DataLabel="Class Avg %" Style="text-align: right; color: #64748b;">
+                            @context.ClassAveragePercentage%
+                        </MudTd>
+                        <MudTd DataLabel="Benchmark">
+                            @{
+                                var diff = context.Percentage - context.ClassAveragePercentage;
+                            }
+                            @if (diff >= 0)
+                            {
+                                <span style="color: #166534; font-weight: 600; font-size: 0.8rem;">
+                                    ▲ +@diff% Above Average
+                                </span>
+                            }
+                            else
+                            {
+                                <span style="color: #b91c1c; font-weight: 600; font-size: 0.8rem;">
+                                    ▼ @diff% Below Average
+                                </span>
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudCard>
+    </MudTabPanel>
+
+    <!-- Tab 4: Attendance vs Academic Correlation -->
+    <MudTabPanel Text="Attendance vs Scores Correlation" Icon="@Icons.Material.Filled.CompareArrows">
+        <MudCard Elevation="0" Outlined="true" Class="pa-4 mb-4">
+            <MudText Typo="Typo.subtitle1" Class="fw-bold mb-1">
+                Correlation: Attendance Regularity vs Academic Exam Scores
+            </MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3 d-block">
+                Identifies students at risk due to absenteeism and provides pedagogical recommendations
+            </MudText>
+
+            @if (_loadingCorrelation)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-3" />
+            }
+            else
+            {
+                <MudTable Items="_correlations" Dense="true" Hover="true" Striped="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Student Name</MudTh>
+                        <MudTh>Grade & Batch</MudTh>
+                        <MudTh Style="text-align: right;">Attendance %</MudTh>
+                        <MudTh Style="text-align: right;">Academic Score %</MudTh>
+                        <MudTh Style="text-align: center;">Category</MudTh>
+                        <MudTh>Actionable Recommendation</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Student" Class="fw-bold">@context.StudentName</MudTd>
+                        <MudTd DataLabel="Grade">@context.GradeName • @context.BatchName</MudTd>
+                        <MudTd DataLabel="Attendance" Style="text-align: right;">
+                            <span style="font-weight: 700; color: @(context.AttendancePercentage >= 80 ? "#166534" : "#b91c1c"); font-size: 0.95rem;">
+                                @context.AttendancePercentage%
+                            </span>
+                        </MudTd>
+                        <MudTd DataLabel="Score" Style="text-align: right;">
+                            <span style="font-weight: 700; color: #1e40af; font-size: 0.95rem;">
+                                @context.AcademicScorePercentage%
+                            </span>
+                        </MudTd>
+                        <MudTd DataLabel="Category" Style="text-align: center;">
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@GetCategoryColor(context.CategoryStatus)">
+                                @context.CategoryStatus
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Recommendation" Style="font-size: 0.8rem; color: #334155;">
+                            @context.Recommendation
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudCard>
+    </MudTabPanel>
+</MudTabs>
+
+@code {
+    private List<SubjectPerformanceComparisonDto> _subjectComparisons = new();
+    private List<BatchPerformanceComparisonDto> _batchComparisons = new();
+    private List<AttendancePerformanceCorrelationDto> _correlations = new();
+    private List<StudentListItemDto> _students = new();
+    private StudentProgressTrendDto? _studentTrend;
+
+    private int _selectedStudentId = 0;
+    private bool _loadingSubjects = true;
+    private bool _loadingBatches = true;
+    private bool _loadingCorrelation = true;
+    private bool _loadingTrend = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var sRes = await ApiService.GetStudentsAsync(pageSize: 200);
+        if (sRes?.Success == true && sRes.Data != null)
+        {
+            _students = sRes.Data.Items;
+            if (_students.Any())
+            {
+                _selectedStudentId = _students.First().Id;
+                await LoadStudentTrend(_selectedStudentId);
+            }
+        }
+
+        await RefreshReports();
+    }
+
+    private async Task RefreshReports()
+    {
+        await LoadSubjectComparisons();
+        await LoadBatchComparisons();
+        await LoadAttendanceCorrelation();
+        if (_selectedStudentId > 0) await LoadStudentTrend(_selectedStudentId);
+    }
+
+    private async Task LoadSubjectComparisons()
+    {
+        _loadingSubjects = true;
+        try
+        {
+            var res = await ApiService.GetSubjectComparisonAsync();
+            if (res?.Success == true && res.Data != null)
+            {
+                _subjectComparisons = res.Data;
+            }
+        }
+        catch { }
+        finally
+        {
+            _loadingSubjects = false;
+        }
+    }
+
+    private async Task LoadBatchComparisons()
+    {
+        _loadingBatches = true;
+        try
+        {
+            var res = await ApiService.GetBatchComparisonAsync();
+            if (res?.Success == true && res.Data != null)
+            {
+                _batchComparisons = res.Data;
+            }
+        }
+        catch { }
+        finally
+        {
+            _loadingBatches = false;
+        }
+    }
+
+    private async Task LoadAttendanceCorrelation()
+    {
+        _loadingCorrelation = true;
+        try
+        {
+            var res = await ApiService.GetAttendanceCorrelationAsync();
+            if (res?.Success == true && res.Data != null)
+            {
+                _correlations = res.Data;
+            }
+        }
+        catch { }
+        finally
+        {
+            _loadingCorrelation = false;
+        }
+    }
+
+    private async Task OnStudentChanged(int studentId)
+    {
+        _selectedStudentId = studentId;
+        await LoadStudentTrend(studentId);
+    }
+
+    private async Task LoadStudentTrend(int studentId)
+    {
+        _loadingTrend = true;
+        try
+        {
+            var res = await ApiService.GetStudentTrendAsync(studentId);
+            if (res?.Success == true && res.Data != null)
+            {
+                _studentTrend = res.Data;
+            }
+        }
+        catch { }
+        finally
+        {
+            _loadingTrend = false;
+        }
+    }
+
+    private static Color GetCategoryColor(string category) => category switch
+    {
+        "Star Performer" => Color.Success,
+        "Critical Academic & Attendance Risk" => Color.Error,
+        "Needs Conceptual Tutoring" => Color.Warning,
+        "Irregular High Potential" => Color.Info,
+        _ => Color.Default
+    };
+
+    private async Task PrintReport()
+    {
+        await JS.InvokeVoidAsync("window.print");
+    }
+}

@@ -1,0 +1,240 @@
+@page "/data-management"
+@attribute [Authorize]
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<PageTitle>Data Management & Backups - Tuition Center</PageTitle>
+
+<div class="mb-4">
+    <MudText Typo="Typo.h5" Class="fw-bold">Data Management, Import/Export & Backups</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary">Bulk onboard students via CSV, export center records, and download complete system backups</MudText>
+</div>
+
+<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" Color="Color.Primary" TabPanelsClass="pa-4">
+    <!-- Tab 1: Data Export Center -->
+    <MudTabPanel Text="Export Data" Icon="@Icons.Material.Filled.FileDownload">
+        <MudGrid>
+            <!-- Students Export Card -->
+            <MudItem xs="12" sm="6">
+                <MudCard Elevation="0" Outlined="true" Class="pa-4 h-100 d-flex flex-column justify-space-between">
+                    <div>
+                        <div class="d-flex align-center gap-2 mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Group" Color="Color.Primary" Size="Size.Large" />
+                            <div>
+                                <MudText Typo="Typo.h6" Class="fw-bold">Student Master Directory</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Complete student roster with parent contacts and board/grade data</MudText>
+                            </div>
+                        </div>
+                        <MudText Typo="Typo.body2" Class="my-2" Style="color: #475569;">
+                            Exports all active student profiles, guardian information (Father & Mother names, phone numbers, WhatsApp), date of birth, and home addresses into standard CSV format.
+                        </MudText>
+                    </div>
+                    <div class="mt-4">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Download" Href="/api/ImportExport/students/export" Target="_blank">
+                            Export Students (CSV)
+                        </MudButton>
+                    </div>
+                </MudCard>
+            </MudItem>
+
+            <!-- Fees Export Card -->
+            <MudItem xs="12" sm="6">
+                <MudCard Elevation="0" Outlined="true" Class="pa-4 h-100 d-flex flex-column justify-space-between">
+                    <div>
+                        <div class="d-flex align-center gap-2 mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Success" Size="Size.Large" />
+                            <div>
+                                <MudText Typo="Typo.h6" Class="fw-bold">Fee Collection Ledger</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Payment receipts, collection dates, modes, and transaction references</MudText>
+                            </div>
+                        </div>
+                        <MudText Typo="Typo.body2" Class="my-2" Style="color: #475569;">
+                            Exports full financial records: Receipt numbers, student IDs, payment modes (Cash, UPI, Cheque), amounts paid, transaction IDs, remarks, and receiving staff name.
+                        </MudText>
+                    </div>
+                    <div class="mt-4">
+                        <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.Download" Href="/api/ImportExport/fees/export" Target="_blank">
+                            Export Fee Ledger (CSV)
+                        </MudButton>
+                    </div>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    </MudTabPanel>
+
+    <!-- Tab 2: Bulk CSV Import Wizard -->
+    <MudTabPanel Text="Bulk Student Import (CSV)" Icon="@Icons.Material.Filled.FileUpload">
+        <MudCard Elevation="0" Outlined="true" Class="pa-4 mb-4">
+            <div class="d-flex justify-space-between align-center mb-3">
+                <div>
+                    <MudText Typo="Typo.subtitle1" Class="fw-bold">Import Students from CSV</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Bulk onboard students into appropriate classes and create parent records automatically</MudText>
+                </div>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.FileDownload" Href="/api/ImportExport/students/template" Target="_blank">
+                    Download Sample Template
+                </MudButton>
+            </div>
+
+            <MudAlert Severity="Severity.Info" Class="mb-3">
+                Expected columns: <code>FirstName,LastName,Gender,DateOfBirth,GradeName,BoardName,SchoolName,FatherName,FatherPhone,FatherWhatsApp,Address</code>.
+            </MudAlert>
+
+            <MudTextField @bind-Value="_csvInput"
+                          Label="Paste CSV Data Here (including header row) *"
+                          Lines="8"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Placeholder="FirstName,LastName,Gender,DateOfBirth,GradeName,BoardName,SchoolName,FatherName,FatherPhone,FatherWhatsApp,Address&#10;Rohan,Verma,Male,2010-05-15,Grade 10,CBSE,St. Xavier High School,Mr. Ramesh Verma,+91 98765 11111,+91 98765 11111,Civil Lines Street"
+                          Class="mb-3" />
+
+            <div class="d-flex justify-end gap-2">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Upload" OnClick="ImportCsv" Disabled="_importing || string.IsNullOrWhiteSpace(_csvInput)">
+                    @if (_importing)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        <span>Processing Import...</span>
+                    }
+                    else
+                    {
+                        <span>Process & Commit Import</span>
+                    }
+                </MudButton>
+            </div>
+
+            @if (_importSummary != null)
+            {
+                <div class="mt-4 pa-4 rounded-lg" style="background-color: #f8fafc; border: 1px solid #e2e8f0;">
+                    <MudText Typo="Typo.subtitle2" Class="fw-bold mb-2">Import Results Summary:</MudText>
+                    <div class="d-flex gap-3 mb-3">
+                        <MudChip T="string" Color="Color.Success" Variant="Variant.Filled">
+                            @_importSummary.SuccessCount Enrolled Successfully
+                        </MudChip>
+                        @if (_importSummary.FailureCount > 0)
+                        {
+                            <MudChip T="string" Color="Color.Error" Variant="Variant.Filled">
+                                @_importSummary.FailureCount Failed Rows
+                            </MudChip>
+                        }
+                    </div>
+
+                    @if (_importSummary.Errors.Any())
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Error" Class="fw-bold d-block mb-1">Errors Encountered:</MudText>
+                        <div style="max-height: 150px; overflow-y: auto; background: white; padding: 8px; border-radius: 4px; border: 1px solid #fee2e2;">
+                            @foreach (var err in _importSummary.Errors)
+                            {
+                                <div style="font-size: 0.75rem; color: #b91c1c;">• @err</div>
+                            }
+                        </div>
+                    }
+
+                    @if (_importSummary.SuccessMessages.Any())
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Success" Class="fw-bold d-block mt-2 mb-1">Enrolled Records:</MudText>
+                        <div style="max-height: 120px; overflow-y: auto; background: white; padding: 8px; border-radius: 4px; border: 1px solid #dcfce7;">
+                            @foreach (var msg in _importSummary.SuccessMessages.Take(15))
+                            {
+                                <div style="font-size: 0.75rem; color: #166534;">✓ @msg</div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </MudCard>
+    </MudTabPanel>
+
+    <!-- Tab 3: Disaster Recovery & JSON Backup -->
+    <MudTabPanel Text="System Backup & Recovery" Icon="@Icons.Material.Filled.Security">
+        <MudCard Elevation="0" Outlined="true" Class="pa-4">
+            <div class="d-flex justify-space-between align-center mb-3">
+                <div>
+                    <MudText Typo="Typo.subtitle1" Class="fw-bold">Database Snapshot & JSON Backup</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Full offline backup bundle including students, grades, fee plans, payments, assessments, and marks</MudText>
+                </div>
+            </div>
+
+            @if (_backupSummary != null)
+            {
+                <MudGrid Class="mb-4">
+                    <MudItem xs="12" sm="4">
+                        <MudPaper Elevation="0" Outlined="true" Class="pa-3 text-center" Style="background: #eff6ff;">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">REGISTERED STUDENTS</MudText>
+                            <MudText Typo="Typo.h5" Class="fw-bold mt-1" Color="Color.Primary">@_backupSummary.TotalStudentsCount</MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudPaper Elevation="0" Outlined="true" Class="pa-3 text-center" Style="background: #f0fdf4;">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">PAYMENT TRANSACTIONS</MudText>
+                            <MudText Typo="Typo.h5" Class="fw-bold mt-1" Color="Color.Success">@_backupSummary.TotalPaymentsCount</MudText>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudPaper Elevation="0" Outlined="true" Class="pa-3 text-center" Style="background: #fefce8;">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">EVALUATED TEST MARKS</MudText>
+                            <MudText Typo="Typo.h5" Class="fw-bold mt-1" Style="color: #a16207;">@_backupSummary.TotalMarksCount</MudText>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            }
+
+            <MudAlert Severity="Severity.Normal" Class="mb-4">
+                The downloaded backup is an encrypted, human-readable JSON snapshot containing all tuition center operational data. It can be stored offline on secure drives or in cloud storage.
+            </MudAlert>
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.CloudDownload" Href="/api/Backup/download" Target="_blank">
+                Download Complete System Backup (JSON)
+            </MudButton>
+        </MudCard>
+    </MudTabPanel>
+</MudTabs>
+
+@code {
+    private string _csvInput = "";
+    private bool _importing = false;
+    private ImportSummaryDto? _importSummary;
+    private SystemBackupBundleDto? _backupSummary;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var res = await ApiService.GetBackupSummaryAsync();
+            if (res?.Success == true && res.Data != null)
+            {
+                _backupSummary = res.Data;
+            }
+        }
+        catch { }
+    }
+
+    private async Task ImportCsv()
+    {
+        if (string.IsNullOrWhiteSpace(_csvInput)) return;
+
+        _importing = true;
+        _importSummary = null;
+
+        try
+        {
+            var res = await ApiService.ImportStudentsCsvAsync(new ImportStudentsRequest { CsvContent = _csvInput });
+            if (res?.Success == true && res.Data != null)
+            {
+                _importSummary = res.Data;
+                Snackbar.Add($"Import complete: {_importSummary.SuccessCount} enrolled, {_importSummary.FailureCount} failed.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Import failed", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _importing = false;
+        }
+    }
+}

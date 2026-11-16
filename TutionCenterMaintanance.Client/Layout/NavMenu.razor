@@ -1,0 +1,77 @@
+<MudNavMenu Class="pa-2">
+    <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard" IconColor="Color.Primary">
+        Dashboard
+    </MudNavLink>
+
+    <MudNavGroup Title="Students" Icon="@Icons.Material.Filled.People" Expanded="true">
+        <MudNavLink Href="/students" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Badge">
+            Student Directory
+        </MudNavLink>
+        <MudNavLink Href="/attendance" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.FactCheck">
+            Daily Attendance
+        </MudNavLink>
+    </MudNavGroup>
+
+    <MudNavGroup Title="Performance & Marks" Icon="@Icons.Material.Filled.Analytics" Expanded="true">
+        <MudNavLink Href="/assessments" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Assignment">
+            Tests & School Exams
+        </MudNavLink>
+        <MudNavLink Href="/marks/bulk-entry" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.FormatListNumbered">
+            Bulk Marks Entry
+        </MudNavLink>
+        <MudNavLink Href="/report-cards" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Description">
+            Student Report Cards
+        </MudNavLink>
+        <MudNavLink Href="/reports" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Insights">
+            Analytics & Reports
+        </MudNavLink>
+    </MudNavGroup>
+
+    <MudNavGroup Title="Fees Management" Icon="@Icons.Material.Filled.CurrencyRupee" Expanded="true">
+        <MudNavLink Href="/fees" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ReceiptLong">
+            Fee Overview & Payments
+        </MudNavLink>
+        <MudNavLink Href="/fees/plans" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.LocalOffer">
+            Fee Plans & Discounts
+        </MudNavLink>
+    </MudNavGroup>
+
+    <MudNavGroup Title="Batches & Academics" Icon="@Icons.Material.Filled.School" Expanded="false">
+        <MudNavLink Href="/batches" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Groups">
+            Class Batches
+        </MudNavLink>
+        <MudNavLink Href="/timetable" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.CalendarMonth">
+            Weekly Timetable
+        </MudNavLink>
+        <MudNavLink Href="/homework" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.MenuBook">
+            Homework & Tasks
+        </MudNavLink>
+        <MudNavLink Href="/academic-setup" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.LibraryBooks">
+            Boards, Subjects & Years
+        </MudNavLink>
+        <MudNavLink Href="/teachers" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Psychology">
+            Teachers & Tutors
+        </MudNavLink>
+    </MudNavGroup>
+
+    <MudNavGroup Title="Communication" Icon="@Icons.Material.Filled.Forum" Expanded="false">
+        <MudNavLink Href="/whatsapp" Match="NavLinkMatch.Prefix" Icon="@Icons.Custom.Brands.WhatsApp">
+            WhatsApp to Parents
+        </MudNavLink>
+    </MudNavGroup>
+
+    <MudNavGroup Title="Administration & IAM" Icon="@Icons.Material.Filled.AdminPanelSettings" Expanded="false">
+        <MudNavLink Href="/users" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ManageAccounts">
+            User Accounts & Roles
+        </MudNavLink>
+        <MudNavLink Href="/data-management" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Storage">
+            Import, Export & Backup
+        </MudNavLink>
+        <MudNavLink Href="/audit" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Fingerprint">
+            Audit Trail Logs
+        </MudNavLink>
+        <MudNavLink Href="/settings" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Tune">
+            Center Settings
+        </MudNavLink>
+    </MudNavGroup>
+</MudNavMenu>

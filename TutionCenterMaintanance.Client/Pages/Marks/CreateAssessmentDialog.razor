@@ -1,0 +1,213 @@
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+
+<MudDialog MaxWidth="MaxWidth.Medium" FullWidth="true">
+    <TitleContent>
+        <div class="d-flex align-center">
+            <MudIcon Icon="@Icons.Material.Filled.Assignment" Color="Color.Primary" Class="mr-2" />
+            <MudText Typo="Typo.h6">Schedule Assessment / Test</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_model.Name" Label="Assessment Title *" Required="true"
+                              Placeholder="e.g. Weekly Test 3, CBSE Mid-Term Examination"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="int" @bind-Value="_model.AssessmentTypeId" Label="Assessment Type *" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var t in _types)
+                    {
+                        <MudSelectItem Value="@t.Id">@t.Name (@t.Category)</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="int" @bind-Value="_model.AcademicYearId" Label="Academic Year *" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var y in _years)
+                    {
+                        <MudSelectItem Value="@y.Id">@y.Name @(y.IsCurrent ? "(Current)" : "")</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="int" Value="_model.GradeId" ValueChanged="OnGradeOrBoardChanged" Label="Grade *" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var g in _grades)
+                    {
+                        <MudSelectItem Value="@g.Id">@g.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="int" Value="_model.BoardId" ValueChanged="OnBoardChanged" Label="Board *" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var b in _boards)
+                    {
+                        <MudSelectItem Value="@b.Id">@b.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudDatePicker @bind-Date="_date" Label="Assessment Date" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+
+            <!-- Tested Subjects & Max Marks -->
+            <MudItem xs="12">
+                <div class="d-flex justify-space-between align-center mt-2 mb-2">
+                    <MudText Typo="Typo.subtitle2" Class="fw-bold">Subjects Tested & Maximum Marks</MudText>
+                    <MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="AddSubjectRow">
+                        Add Subject
+                    </MudButton>
+                </div>
+
+                @if (_model.Subjects.Any())
+                {
+                    @for (int i = 0; i < _model.Subjects.Count; i++)
+                    {
+                        var index = i;
+                        var row = _model.Subjects[index];
+                        <div class="d-flex align-center gap-2 mb-2">
+                            <MudSelect T="int" @bind-Value="row.SubjectId" Label="Subject" Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex: 2;">
+                                @foreach (var sub in _subjects)
+                                {
+                                    <MudSelectItem Value="@sub.Id">@sub.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudNumericField T="decimal" @bind-Value="row.MaxMarks" Label="Max Marks" Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex: 1;" Min="1" Max="500" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => RemoveSubjectRow(index))" />
+                        </div>
+                    }
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true">Please add at least one subject to be assessed.</MudAlert>
+                }
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveAssessment" Disabled="_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Scheduling...</span>
+            }
+            else
+            {
+                <span>Schedule Assessment</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private CreateAssessmentRequest _model = new();
+    private DateTime? _date = DateTime.Today;
+    private List<AssessmentTypeDto> _types = new();
+    private List<AcademicYearDto> _years = new();
+    private List<GradeDto> _grades = new();
+    private List<BoardDto> _boards = new();
+    private List<SubjectDto> _subjects = new();
+    private bool _saving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var tRes = await ApiService.GetAssessmentTypesAsync();
+        if (tRes?.Success == true && tRes.Data != null) _types = tRes.Data;
+
+        var yRes = await ApiService.GetAcademicYearsAsync();
+        if (yRes?.Success == true && yRes.Data != null) _years = yRes.Data;
+
+        var gRes = await ApiService.GetGradesAsync();
+        if (gRes?.Success == true && gRes.Data != null) _grades = gRes.Data;
+
+        var bRes = await ApiService.GetBoardsAsync();
+        if (bRes?.Success == true && bRes.Data != null) _boards = bRes.Data;
+
+        var sRes = await ApiService.GetSubjectsAsync();
+        if (sRes?.Success == true && sRes.Data != null) _subjects = sRes.Data;
+
+        _model.AssessmentTypeId = _types.FirstOrDefault()?.Id ?? 1;
+        _model.AcademicYearId = _years.FirstOrDefault(y => y.IsCurrent)?.Id ?? _years.FirstOrDefault()?.Id ?? 1;
+        _model.GradeId = _grades.FirstOrDefault()?.Id ?? 1;
+        _model.BoardId = _boards.FirstOrDefault()?.Id ?? 1;
+
+        // Default 1 subject row
+        if (_subjects.Any())
+        {
+            _model.Subjects.Add(new CreateAssessmentSubjectItem { SubjectId = _subjects.First().Id, MaxMarks = 100 });
+        }
+    }
+
+    private void OnGradeOrBoardChanged(int gradeId)
+    {
+        _model.GradeId = gradeId;
+    }
+
+    private void OnBoardChanged(int boardId)
+    {
+        _model.BoardId = boardId;
+    }
+
+    private void AddSubjectRow()
+    {
+        if (_subjects.Any())
+        {
+            _model.Subjects.Add(new CreateAssessmentSubjectItem { SubjectId = _subjects.First().Id, MaxMarks = 100 });
+        }
+    }
+
+    private void RemoveSubjectRow(int index)
+    {
+        if (index >= 0 && index < _model.Subjects.Count)
+        {
+            _model.Subjects.RemoveAt(index);
+        }
+    }
+
+    private async Task SaveAssessment()
+    {
+        if (string.IsNullOrWhiteSpace(_model.Name))
+        {
+            Snackbar.Add("Please enter an assessment name.", Severity.Warning);
+            return;
+        }
+
+        if (!_model.Subjects.Any())
+        {
+            Snackbar.Add("Please add at least one subject with max marks.", Severity.Warning);
+            return;
+        }
+
+        _model.Date = _date ?? DateTime.Today;
+        _saving = true;
+
+        try
+        {
+            var res = await ApiService.CreateAssessmentAsync(_model);
+            if (res?.Success == true)
+            {
+                Snackbar.Add("Assessment scheduled successfully!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to schedule assessment.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

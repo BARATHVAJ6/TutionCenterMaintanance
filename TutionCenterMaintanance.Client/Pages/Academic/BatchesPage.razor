@@ -1,0 +1,308 @@
+@page "/batches"
+@attribute [Authorize]
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Batches & Groups - Tuition Center</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <div>
+        <MudText Typo="Typo.h5" Class="fw-bold">Batch & Class Group Management</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Organize students into timing cohorts, grade levels, and subject batches</MudText>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.GroupAdd" OnClick="OpenCreateBatchDialog">
+        Create New Batch
+    </MudButton>
+</div>
+
+<MudCard Elevation="2" Class="rounded-lg overflow-hidden">
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+
+    <MudTable Items="@_batches" Dense="true" Hover="true" Striped="true" Elevation="0">
+        <HeaderContent>
+            <MudTh>Batch Name</MudTh>
+            <MudTh>Grade & Board</MudTh>
+            <MudTh>Schedule / Timing</MudTh>
+            <MudTh>Academic Year</MudTh>
+            <MudTh>Enrolled Students</MudTh>
+            <MudTh Style="text-align: right;">Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Batch Name">
+                <MudText Typo="Typo.subtitle2" Class="fw-bold">@context.Name</MudText>
+            </MudTd>
+            <MudTd DataLabel="Grade & Board">
+                <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">@context.GradeName</MudChip>
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@context.BoardName</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Schedule">
+                <MudText Typo="Typo.body2">@(context.Schedule ?? "Daily Evening (5:00 PM - 7:30 PM)")</MudText>
+            </MudTd>
+            <MudTd DataLabel="Year">@context.AcademicYearName</MudTd>
+            <MudTd DataLabel="Students">
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">
+                    @context.StudentCount Students
+                </MudChip>
+            </MudTd>
+            <MudTd Style="text-align: right;" DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" OnClick="@(() => OpenEditBatchDialog(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteBatch(context.Id, context.Name))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <div class="pa-8 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.Groups" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+                <MudText Typo="Typo.h6">No batches configured</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Create a batch to group students for attendance and marks tracking.</MudText>
+            </div>
+        </NoRecordsContent>
+    </MudTable>
+</MudCard>
+
+<!-- Batch Dialog -->
+<MudDialog @bind-Visible="_showDialog" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(_isEdit ? "Edit Batch" : "Create New Batch")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_currentBatch.Name" Label="Batch Name *" Required="true"
+                              Placeholder="e.g. Evening Batch Grade 10 CBSE" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="int" @bind-Value="_currentBatch.GradeId" Label="Grade *" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var g in _grades)
+                    {
+                        <MudSelectItem Value="@g.Id">@g.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="int" @bind-Value="_currentBatch.BoardId" Label="Board *" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var b in _boards)
+                    {
+                        <MudSelectItem Value="@b.Id">@b.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="int" @bind-Value="_currentBatch.AcademicYearId" Label="Academic Year *" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var y in _years)
+                    {
+                        <MudSelectItem Value="@y.Id">@y.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_currentBatch.Schedule" Label="Schedule / Timings"
+                              Placeholder="e.g. Mon-Fri 5:30 PM - 7:30 PM" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle2" Class="fw-bold mb-2">Assign Enrolled Students:</MudText>
+                <div style="max-height: 220px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px;">
+                    @if (_availableStudents.Any())
+                    {
+                        @foreach (var stu in _availableStudents)
+                        {
+                            var isChecked = _currentBatch.StudentIds.Contains(stu.Id);
+                            <MudCheckBox T="bool" Value="@isChecked" ValueChanged="@((bool val) => ToggleStudent(stu.Id, val))" Color="Color.Primary" Dense="true" Class="my-1">
+                                <strong>@stu.FullName</strong> (@stu.GradeName - @stu.BoardName)
+                            </MudCheckBox>
+                        }
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">No students available in directory.</MudText>
+                    }
+                </div>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveBatch" Disabled="_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Save Batch</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private List<BatchDto> _batches = new();
+    private List<GradeDto> _grades = new();
+    private List<BoardDto> _boards = new();
+    private List<AcademicYearDto> _years = new();
+    private List<StudentListItemDto> _availableStudents = new();
+
+    private bool _loading = true;
+    private bool _saving = false;
+    private bool _showDialog = false;
+    private bool _isEdit = false;
+    private int _editBatchId;
+    private CreateBatchRequest _currentBatch = new();
+    private DialogOptions _dialogOptions = new() { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var gRes = await ApiService.GetGradesAsync();
+        if (gRes?.Success == true && gRes.Data != null) _grades = gRes.Data;
+
+        var bRes = await ApiService.GetBoardsAsync();
+        if (bRes?.Success == true && bRes.Data != null) _boards = bRes.Data;
+
+        var yRes = await ApiService.GetAcademicYearsAsync();
+        if (yRes?.Success == true && yRes.Data != null) _years = yRes.Data;
+
+        var stuRes = await ApiService.GetStudentsAsync(pageSize: 300);
+        if (stuRes?.Success == true && stuRes.Data != null) _availableStudents = stuRes.Data.Items;
+
+        await LoadBatches();
+    }
+
+    private async Task LoadBatches()
+    {
+        _loading = true;
+        try
+        {
+            var res = await ApiService.GetBatchesAsync();
+            if (res?.Success == true && res.Data != null)
+            {
+                _batches = res.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading batches: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OpenCreateBatchDialog()
+    {
+        _isEdit = false;
+        _currentBatch = new CreateBatchRequest
+        {
+            GradeId = _grades.FirstOrDefault()?.Id ?? 1,
+            BoardId = _boards.FirstOrDefault()?.Id ?? 1,
+            AcademicYearId = _years.FirstOrDefault(y => y.IsCurrent)?.Id ?? _years.FirstOrDefault()?.Id ?? 1,
+            Schedule = "Mon to Fri: 5:00 PM - 7:30 PM"
+        };
+        _showDialog = true;
+    }
+
+    private void OpenEditBatchDialog(BatchDto b)
+    {
+        _isEdit = true;
+        _editBatchId = b.Id;
+        _currentBatch = new CreateBatchRequest
+        {
+            Name = b.Name,
+            GradeId = b.GradeId,
+            BoardId = b.BoardId,
+            AcademicYearId = b.AcademicYearId,
+            Schedule = b.Schedule,
+            IsActive = b.IsActive,
+            StudentIds = b.StudentIds
+        };
+        _showDialog = true;
+    }
+
+    private void ToggleStudent(int stuId, bool isChecked)
+    {
+        if (isChecked && !_currentBatch.StudentIds.Contains(stuId))
+        {
+            _currentBatch.StudentIds.Add(stuId);
+        }
+        else if (!isChecked)
+        {
+            _currentBatch.StudentIds.Remove(stuId);
+        }
+    }
+
+    private async Task SaveBatch()
+    {
+        if (string.IsNullOrWhiteSpace(_currentBatch.Name))
+        {
+            Snackbar.Add("Please enter a batch name.", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            if (_isEdit)
+            {
+                var res = await ApiService.UpdateBatchAsync(_editBatchId, _currentBatch);
+                if (res?.Success == true)
+                {
+                    Snackbar.Add("Batch updated successfully!", Severity.Success);
+                    _showDialog = false;
+                    await LoadBatches();
+                }
+                else
+                {
+                    Snackbar.Add(res?.Message ?? "Failed to update batch.", Severity.Error);
+                }
+            }
+            else
+            {
+                var res = await ApiService.CreateBatchAsync(_currentBatch);
+                if (res?.Success == true)
+                {
+                    Snackbar.Add("Batch created successfully!", Severity.Success);
+                    _showDialog = false;
+                    await LoadBatches();
+                }
+                else
+                {
+                    Snackbar.Add(res?.Message ?? "Failed to create batch.", Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task DeleteBatch(int id, string name)
+    {
+        bool? confirmed = await DialogService.ShowMessageBoxAsync(
+            "Delete Batch",
+            $"Are you sure you want to delete batch '{name}'?",
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            var res = await ApiService.DeleteBatchAsync(id);
+            if (res?.Success == true)
+            {
+                Snackbar.Add("Batch deleted successfully.", Severity.Success);
+                await LoadBatches();
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to delete batch.", Severity.Error);
+            }
+        }
+    }
+}

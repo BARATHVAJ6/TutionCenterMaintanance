@@ -1,0 +1,263 @@
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center justify-space-between w-100">
+            <div class="d-flex align-center">
+                <MudIcon Icon="@Icons.Material.Filled.AccountBalanceWallet" Color="Color.Primary" Class="mr-2" />
+                <MudText Typo="Typo.h6">Student Fee Ledger</MudText>
+            </div>
+            @if (_ledger != null)
+            {
+                <MudChip T="string" Color="@GetStatusColor(_ledger.Status)" Size="Size.Small" Variant="Variant.Filled">
+                    @_ledger.Status
+                </MudChip>
+            }
+        </div>
+    </TitleContent>
+    <DialogContent>
+        @if (_loading)
+        {
+            <div class="d-flex justify-center my-8">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            </div>
+        }
+        else if (_ledger == null)
+        {
+            <MudAlert Severity="Severity.Error">Could not load fee ledger for student.</MudAlert>
+        }
+        else
+        {
+            <!-- Student & Plan Overview -->
+            <MudPaper Class="pa-3 mb-4" Elevation="0" Outlined="true" Style="background-color: #f8fafc;">
+                <MudGrid Spacing="2" Class="align-center">
+                    <MudItem xs="12" sm="4">
+                        <MudText Typo="Typo.subtitle1" Class="fw-bold">@_ledger.StudentName</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @_ledger.GradeName • @_ledger.BoardName
+                        </MudText>
+                        <div class="mt-1" style="font-size: 0.8rem; color: #64748b;">
+                            Father: @_ledger.FatherName (@_ledger.PrimaryPhone)
+                        </div>
+                    </MudItem>
+                    <MudItem xs="4" sm="2" Class="text-center">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Fee Plan</MudText>
+                        <MudText Typo="Typo.body2" Class="fw-bold">@_ledger.FeePlanName</MudText>
+                    </MudItem>
+                    <MudItem xs="4" sm="2" Class="text-center">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Total Assigned</MudText>
+                        <MudText Typo="Typo.body1" Class="fw-bold" Color="Color.Dark">₹@_ledger.TotalFee.ToString("N0")</MudText>
+                    </MudItem>
+                    <MudItem xs="4" sm="2" Class="text-center">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Total Paid</MudText>
+                        <MudText Typo="Typo.body1" Class="fw-bold" Color="Color.Success">₹@_ledger.PaidAmount.ToString("N0")</MudText>
+                    </MudItem>
+                    <MudItem xs="12" sm="2" Class="text-center">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Balance Due</MudText>
+                        <MudText Typo="Typo.body1" Class="fw-bold" Color="@(_ledger.DueAmount > 0 ? Color.Error : Color.Success)">
+                            ₹@_ledger.DueAmount.ToString("N0")
+                        </MudText>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+
+            <!-- Installments & Payments Tabs -->
+            <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="pt-3">
+                <MudTabPanel Text="Installment Schedule" Icon="@Icons.Material.Filled.CalendarMonth" BadgeData="@_ledger.Installments.Count" BadgeColor="Color.Primary">
+                    @if (!_ledger.Installments.Any())
+                    {
+                        <MudAlert Severity="Severity.Info" Class="my-2">
+                            No installment breakdown generated for this plan. Fee is recorded as a single open balance.
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <MudTable Items="_ledger.Installments" Dense="true" Hover="true" Elevation="0" Outlined="true">
+                            <HeaderContent>
+                                <MudTh>Installment</MudTh>
+                                <MudTh>Due Date</MudTh>
+                                <MudTh Style="text-align: right;">Amount</MudTh>
+                                <MudTh Style="text-align: right;">Paid</MudTh>
+                                <MudTh Style="text-align: right;">Remaining</MudTh>
+                                <MudTh Style="text-align: center;">Status</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Installment">
+                                    <div class="fw-bold">@context.Title</div>
+                                </MudTd>
+                                <MudTd DataLabel="Due Date">
+                                    <div>@context.DueDate.ToString("dd MMM yyyy")</div>
+                                    @if (context.IsOverdue)
+                                    {
+                                        <div style="font-size: 0.72rem; color: #dc2626; font-weight: 600;">
+                                            @context.DaysOverdue days overdue
+                                        </div>
+                                    }
+                                </MudTd>
+                                <MudTd DataLabel="Amount" Style="text-align: right; font-weight: 600;">
+                                    ₹@context.Amount.ToString("N0")
+                                </MudTd>
+                                <MudTd DataLabel="Paid" Style="text-align: right; color: #166534; font-weight: 600;">
+                                    ₹@context.PaidAmount.ToString("N0")
+                                </MudTd>
+                                <MudTd DataLabel="Remaining" Style="@($"text-align: right; color: {(context.RemainingAmount > 0 ? "#b91c1c" : "#166534")}; font-weight: 600;")">
+                                    ₹@context.RemainingAmount.ToString("N0")
+                                </MudTd>
+                                <MudTd DataLabel="Status" Style="text-align: center;">
+                                    <MudChip T="string" Color="@GetStatusColor(context.Status)" Size="Size.Small" Variant="Variant.Outlined">
+                                        @context.Status
+                                    </MudChip>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                </MudTabPanel>
+
+                <MudTabPanel Text="Payment Transactions" Icon="@Icons.Material.Filled.Receipt" BadgeData="@_ledger.Payments.Count" BadgeColor="Color.Success">
+                    @if (!_ledger.Payments.Any())
+                    {
+                        <MudAlert Severity="Severity.Warning" Class="my-2">
+                            No payment transactions recorded for this student yet.
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <MudTable Items="_ledger.Payments" Dense="true" Hover="true" Elevation="0" Outlined="true">
+                            <HeaderContent>
+                                <MudTh>Receipt #</MudTh>
+                                <MudTh>Date</MudTh>
+                                <MudTh>Mode</MudTh>
+                                <MudTh Style="text-align: right;">Amount Paid</MudTh>
+                                <MudTh>Received By</MudTh>
+                                <MudTh Style="text-align: center;">Actions</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Receipt #">
+                                    <span class="fw-bold" style="color: #1e3a8a;">@context.ReceiptNumber</span>
+                                    @if (!string.IsNullOrEmpty(context.TransactionRef))
+                                    {
+                                        <div style="font-size: 0.72rem; color: #64748b;">Ref: @context.TransactionRef</div>
+                                    }
+                                </MudTd>
+                                <MudTd DataLabel="Date">
+                                    @context.PaymentDate.ToString("dd MMM yyyy")
+                                </MudTd>
+                                <MudTd DataLabel="Mode">
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">
+                                        @context.PaymentMode
+                                    </MudChip>
+                                </MudTd>
+                                <MudTd DataLabel="Amount Paid" Style="text-align: right; font-weight: 700; color: #166534;">
+                                    ₹@context.Amount.ToString("N0")
+                                </MudTd>
+                                <MudTd DataLabel="Received By">
+                                    <span style="font-size: 0.85rem;">@context.ReceivedByName</span>
+                                </MudTd>
+                                <MudTd DataLabel="Actions" Style="text-align: center;">
+                                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
+                                               StartIcon="@Icons.Material.Filled.ReceiptLong"
+                                               OnClick="@(() => ViewReceipt(context.Id))">
+                                        Receipt
+                                    </MudButton>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                </MudTabPanel>
+            </MudTabs>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Close</MudButton>
+        @if (_ledger != null && _ledger.DueAmount > 0)
+        {
+            <MudButton Color="Color.Success" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Payment" OnClick="OpenRecordPayment">
+                Record Payment
+            </MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public int StudentId { get; set; }
+
+    private StudentFeeLedgerDto? _ledger;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLedgerAsync();
+    }
+
+    private async Task LoadLedgerAsync()
+    {
+        _loading = true;
+        try
+        {
+            var res = await ApiService.GetStudentFeeLedgerAsync(StudentId);
+            if (res?.Success == true)
+            {
+                _ledger = res.Data;
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to load fee ledger", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ViewReceipt(int paymentId)
+    {
+        var parameters = new DialogParameters<PaymentReceiptDialog>
+        {
+            { x => x.PaymentId, paymentId }
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        await DialogService.ShowAsync<PaymentReceiptDialog>("Receipt Details", parameters, options);
+    }
+
+    private async Task OpenRecordPayment()
+    {
+        if (_ledger == null) return;
+
+        var parameters = new DialogParameters<RecordPaymentDialog>
+        {
+            { x => x.StudentId, _ledger.StudentId },
+            { x => x.StudentName, _ledger.StudentName },
+            { x => x.DueAmount, _ledger.DueAmount }
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<RecordPaymentDialog>("Record Fee Payment", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            await LoadLedgerAsync();
+        }
+    }
+
+    private static Color GetStatusColor(PaymentStatus status) => status switch
+    {
+        PaymentStatus.Paid => Color.Success,
+        PaymentStatus.PartiallyPaid => Color.Warning,
+        PaymentStatus.Pending => Color.Default,
+        PaymentStatus.Overdue => Color.Error,
+        _ => Color.Default
+    };
+
+    private void Close() => MudDialog.Close(DialogResult.Ok(true));
+}

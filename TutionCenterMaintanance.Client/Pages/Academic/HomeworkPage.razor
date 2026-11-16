@@ -1,0 +1,476 @@
+@page "/homework"
+@attribute [Authorize]
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IJSRuntime JS
+
+<PageTitle>Homework & Assignments - Tuition Center</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <div>
+        <MudText Typo="Typo.h5" Class="fw-bold">Homework & Assignment Tracking</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Assign daily tasks, track student completion, and notify parents on WhatsApp</MudText>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateHomeworkDialog">
+        Assign Homework
+    </MudButton>
+</div>
+
+<!-- Filter Bar -->
+<MudCard Elevation="0" Outlined="true" Class="pa-3 mb-4">
+    <MudGrid Class="align-center">
+        <MudItem xs="12" sm="5">
+            <MudSelect T="int?" Value="_selectedBatchId" ValueChanged="OnBatchFilterChanged" Label="Filter by Batch" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                @foreach (var b in _batches)
+                {
+                    <MudSelectItem T="int?" Value="@b.Id">@b.Name (@b.GradeName)</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="7" Class="text-right">
+            <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadHomework">
+                Refresh
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudCard>
+
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+}
+
+<MudGrid Spacing="3">
+    @if (!_homeworkList.Any() && !_loading)
+    {
+        <MudItem xs="12">
+            <MudPaper Class="pa-8 text-center" Elevation="0" Outlined="true">
+                <MudIcon Icon="@Icons.Material.Filled.AssignmentTurnedIn" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+                <MudText Typo="Typo.h6">No homework assignments recorded</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Click "Assign Homework" above to create tasks for your batches.</MudText>
+            </MudPaper>
+        </MudItem>
+    }
+    else
+    {
+        @foreach (var hw in _homeworkList)
+        {
+            <MudItem xs="12" md="6" lg="4">
+                <MudCard Elevation="2" Class="h-100 rounded-lg d-flex flex-column justify-space-between">
+                    <div>
+                        <MudCardHeader Class="pb-2">
+                            <CardHeaderContent>
+                                <div class="d-flex justify-space-between align-center">
+                                    <MudChip T="string" Color="Color.Primary" Size="Size.Small" Variant="Variant.Filled">
+                                        @hw.SubjectName
+                                    </MudChip>
+                                    @if (hw.IsOverdue)
+                                    {
+                                        <MudChip T="string" Color="Color.Error" Size="Size.Small" Variant="Variant.Outlined">
+                                            Overdue
+                                        </MudChip>
+                                    }
+                                    else
+                                    {
+                                        <span style="font-size: 0.75rem; color: #64748b;">
+                                            Due: @hw.DueDate.ToString("dd MMM yyyy")
+                                        </span>
+                                    }
+                                </div>
+                                <MudText Typo="Typo.h6" Class="fw-bold mt-2">@hw.Title</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    Batch: @hw.BatchName (@hw.GradeName) • Teacher: @hw.TeacherName
+                                </MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+
+                        <MudCardContent Class="py-2">
+                            @if (!string.IsNullOrEmpty(hw.Description))
+                            {
+                                <MudText Typo="Typo.body2" Style="color: #475569; font-size: 0.85rem;" Class="mb-3">
+                                    @hw.Description
+                                </MudText>
+                            }
+
+                            <!-- Submission stats chips -->
+                            <div class="d-flex gap-2 flex-wrap mb-2">
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">
+                                    @hw.CheckedCount Checked
+                                </MudChip>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
+                                    @hw.SubmittedCount Submitted
+                                </MudChip>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                                    @hw.PendingCount Pending
+                                </MudChip>
+                            </div>
+
+                            @{
+                                var total = hw.TotalStudentsCount > 0 ? hw.TotalStudentsCount : 1;
+                                var completionPct = Math.Round(((double)(hw.CheckedCount + hw.SubmittedCount) / total) * 100, 0);
+                            }
+                            <div class="d-flex justify-space-between align-center mb-1">
+                                <span style="font-size: 0.75rem; color: #64748b;">Completion Rate</span>
+                                <span style="font-size: 0.75rem; font-weight: bold;">@completionPct%</span>
+                            </div>
+                            <MudProgressLinear Color="Color.Success" Value="@completionPct" Rounded="true" Size="Size.Medium" />
+                        </MudCardContent>
+                    </div>
+
+                    <MudCardActions Class="px-4 pb-3 justify-space-between">
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Checklist" OnClick="@(() => OpenSubmissionsDialog(hw.Id))">
+                            Evaluate Submissions
+                        </MudButton>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteHomework(hw.Id))" />
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    }
+</MudGrid>
+
+<!-- Create Homework Dialog -->
+<MudDialog @bind-Visible="_showCreateDialog">
+    <TitleContent>
+        <div class="d-flex align-center">
+            <MudIcon Icon="@Icons.Material.Filled.Assignment" Color="Color.Primary" Class="mr-2" />
+            <MudText Typo="Typo.h6">Assign New Homework</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_createModel.Title" Label="Homework Title *" Placeholder="e.g. Chapter 4 Exercise 4.2 & 4.3" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="int" @bind-Value="_createModel.BatchId" Label="Class Batch *" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var b in _batches)
+                    {
+                        <MudSelectItem Value="@b.Id">@b.Name (@b.GradeName)</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="int" @bind-Value="_createModel.SubjectId" Label="Subject *" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var s in _subjects)
+                    {
+                        <MudSelectItem Value="@s.Id">@s.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12">
+                <MudSelect T="int" @bind-Value="_createModel.TeacherId" Label="Teacher *" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var t in _teachers)
+                    {
+                        <MudSelectItem Value="@t.Id">@t.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudDatePicker @bind-Date="_assignedDate" Label="Assigned Date *" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudDatePicker @bind-Date="_dueDate" Label="Submission Due Date *" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_createModel.Description" Label="Instructions & Details" Lines="3" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="Solve questions 1 through 15 in homework notebook..." />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showCreateDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveCreateHomework" Disabled="_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Assigning...</span>
+            }
+            else
+            {
+                <span>Assign to Batch</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<!-- Evaluate Submissions Dialog -->
+<MudDialog @bind-Visible="_showSubmissionsDialog">
+    <TitleContent>
+        <div class="d-flex align-center justify-space-between w-100">
+            <div class="d-flex align-center">
+                <MudIcon Icon="@Icons.Material.Filled.RateReview" Color="Color.Primary" Class="mr-2" />
+                <div>
+                    <MudText Typo="Typo.h6">@_detailModel?.Homework.Title</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Batch: @_detailModel?.Homework.BatchName • Due: @_detailModel?.Homework.DueDate.ToString("dd MMM yyyy")
+                    </MudText>
+                </div>
+            </div>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        @if (_detailModel == null)
+        {
+            <div class="d-flex justify-center my-4">
+                <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+            </div>
+        }
+        else
+        {
+            <MudTable Items="_detailModel.Submissions" Dense="true" Hover="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh>Student Name</MudTh>
+                    <MudTh>Parent</MudTh>
+                    <MudTh Style="width: 150px;">Status</MudTh>
+                    <MudTh>Teacher Remarks</MudTh>
+                    <MudTh Style="text-align: right;">WhatsApp</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Student" Class="fw-bold">@context.StudentName</MudTd>
+                    <MudTd DataLabel="Parent">
+                        <div>@context.ParentName</div>
+                        <span style="font-size: 0.75rem; color: #64748b;">@context.ParentPhone</span>
+                    </MudTd>
+                    <MudTd DataLabel="Status">
+                        <MudSelect T="string" @bind-Value="context.Status" Margin="Margin.Dense" Variant="Variant.Outlined">
+                            <MudSelectItem Value="@("Pending")">Pending</MudSelectItem>
+                            <MudSelectItem Value="@("Submitted")">Submitted</MudSelectItem>
+                            <MudSelectItem Value="@("Checked")">Checked</MudSelectItem>
+                            <MudSelectItem Value="@("Late")">Late</MudSelectItem>
+                        </MudSelect>
+                    </MudTd>
+                    <MudTd DataLabel="Remarks">
+                        <MudTextField @bind-Value="context.Remarks" Placeholder="e.g. Good work, Incomplete" Margin="Margin.Dense" Variant="Variant.Outlined" />
+                    </MudTd>
+                    <MudTd DataLabel="WhatsApp" Style="text-align: right;">
+                        @if (!string.IsNullOrEmpty(context.WhatsAppPhone) || !string.IsNullOrEmpty(context.ParentPhone))
+                        {
+                            <MudIconButton Icon="@Icons.Custom.Brands.WhatsApp" Color="Color.Success" Size="Size.Small"
+                                           OnClick="@(() => SendHomeworkAlert(context))" />
+                        }
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showSubmissionsDialog = false)">Close</MudButton>
+        <MudButton Color="Color.Success" Variant="Variant.Filled" OnClick="SaveSubmissions" Disabled="_savingSubmissions">
+            @if (_savingSubmissions)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Save All Changes</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private List<HomeworkDto> _homeworkList = new();
+    private List<BatchDto> _batches = new();
+    private List<SubjectDto> _subjects = new();
+    private List<TeacherDto> _teachers = new();
+
+    private int? _selectedBatchId;
+    private bool _loading = true;
+    private bool _showCreateDialog = false;
+    private bool _showSubmissionsDialog = false;
+    private bool _saving = false;
+    private bool _savingSubmissions = false;
+
+    private CreateHomeworkRequest _createModel = new();
+    private DateTime? _assignedDate = DateTime.Today;
+    private DateTime? _dueDate = DateTime.Today.AddDays(2);
+    private HomeworkDetailDto? _detailModel;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var bRes = await ApiService.GetBatchesAsync();
+        if (bRes?.Success == true && bRes.Data != null) _batches = bRes.Data;
+
+        var sRes = await ApiService.GetSubjectsAsync();
+        if (sRes?.Success == true && sRes.Data != null) _subjects = sRes.Data;
+
+        var tRes = await ApiService.GetTeachersAsync();
+        if (tRes?.Success == true && tRes.Data != null) _teachers = tRes.Data;
+
+        await LoadHomework();
+    }
+
+    private async Task OnBatchFilterChanged(int? batchId)
+    {
+        _selectedBatchId = batchId;
+        await LoadHomework();
+    }
+
+    private async Task LoadHomework()
+    {
+        _loading = true;
+        try
+        {
+            var res = await ApiService.GetHomeworkListAsync(_selectedBatchId);
+            if (res?.Success == true && res.Data != null)
+            {
+                _homeworkList = res.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading homework: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OpenCreateHomeworkDialog()
+    {
+        _createModel = new CreateHomeworkRequest
+        {
+            BatchId = _selectedBatchId ?? (_batches.FirstOrDefault()?.Id ?? 0),
+            SubjectId = _subjects.FirstOrDefault()?.Id ?? 0,
+            TeacherId = _teachers.FirstOrDefault()?.Id ?? 0,
+            Title = "",
+            Description = ""
+        };
+        _assignedDate = DateTime.Today;
+        _dueDate = DateTime.Today.AddDays(2);
+        _showCreateDialog = true;
+    }
+
+    private async Task SaveCreateHomework()
+    {
+        if (string.IsNullOrWhiteSpace(_createModel.Title) || _createModel.BatchId == 0 || _createModel.SubjectId == 0 || _createModel.TeacherId == 0)
+        {
+            Snackbar.Add("Please complete all required fields", Severity.Warning);
+            return;
+        }
+
+        _createModel.AssignedDate = _assignedDate ?? DateTime.Today;
+        _createModel.DueDate = _dueDate ?? DateTime.Today.AddDays(2);
+
+        _saving = true;
+        try
+        {
+            var res = await ApiService.CreateHomeworkAsync(_createModel);
+            if (res?.Success == true)
+            {
+                Snackbar.Add("Homework assigned successfully!", Severity.Success);
+                _showCreateDialog = false;
+                await LoadHomework();
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to assign homework", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task OpenSubmissionsDialog(int homeworkId)
+    {
+        _detailModel = null;
+        _showSubmissionsDialog = true;
+
+        var res = await ApiService.GetHomeworkSubmissionsAsync(homeworkId);
+        if (res?.Success == true && res.Data != null)
+        {
+            _detailModel = res.Data;
+        }
+        else
+        {
+            Snackbar.Add("Could not load submissions", Severity.Error);
+            _showSubmissionsDialog = false;
+        }
+    }
+
+    private async Task SaveSubmissions()
+    {
+        if (_detailModel == null) return;
+
+        _savingSubmissions = true;
+        try
+        {
+            var req = new BulkUpdateHomeworkSubmissionsRequest
+            {
+                HomeworkId = _detailModel.Homework.Id,
+                Submissions = _detailModel.Submissions
+            };
+
+            var res = await ApiService.BulkUpdateHomeworkSubmissionsAsync(_detailModel.Homework.Id, req);
+            if (res?.Success == true)
+            {
+                Snackbar.Add("Submissions saved successfully!", Severity.Success);
+                _showSubmissionsDialog = false;
+                await LoadHomework();
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to save submissions", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _savingSubmissions = false;
+        }
+    }
+
+    private async Task SendHomeworkAlert(HomeworkSubmissionItemDto sub)
+    {
+        if (_detailModel == null) return;
+
+        var phone = !string.IsNullOrEmpty(sub.WhatsAppPhone) ? sub.WhatsAppPhone : sub.ParentPhone;
+        var cleanPhone = phone.Replace(" ", "").Replace("-", "").Replace("+", "");
+        if (cleanPhone.Length == 10) cleanPhone = "91" + cleanPhone;
+
+        var hw = _detailModel.Homework;
+        var message = $"Dear {sub.ParentName},\n\nHomework Update for {sub.StudentName} ({hw.BatchName}):\nSubject: {hw.SubjectName}\nTask: {hw.Title}\nStatus: {sub.Status}\nDue Date: {hw.DueDate:dd-MMM-yyyy}\nRemarks: {sub.Remarks ?? "Please ensure timely completion."}\n\nBright Minds Tuition Center";
+
+        var encoded = Uri.EscapeDataString(message);
+        var url = $"https://wa.me/{cleanPhone}?text={encoded}";
+
+        await JS.InvokeVoidAsync("open", url, "_blank");
+
+        await ApiService.LogWhatsAppDispatchAsync(new LogWhatsAppDispatchDto
+        {
+            StudentId = sub.StudentId,
+            RecipientName = sub.ParentName,
+            RecipientPhone = phone,
+            MessageCategory = "HomeworkNotice",
+            MessageBody = message
+        });
+
+        Snackbar.Add($"WhatsApp opened for {sub.StudentName}", Severity.Success);
+    }
+
+    private async Task DeleteHomework(int id)
+    {
+        bool? confirm = await DialogService.ShowMessageBoxAsync("Delete Homework", "Are you sure you want to delete this homework assignment and its submission records?", yesText: "Delete", cancelText: "Cancel");
+        if (confirm == true)
+        {
+            var res = await ApiService.DeleteHomeworkAsync(id);
+            if (res?.Success == true)
+            {
+                Snackbar.Add("Homework deleted", Severity.Info);
+                await LoadHomework();
+            }
+        }
+    }
+}

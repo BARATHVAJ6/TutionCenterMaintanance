@@ -1,0 +1,122 @@
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center">
+            <MudIcon Icon="@Icons.Material.Filled.Receipt" Color="Color.Success" Class="mr-2" />
+            <MudText Typo="Typo.h6">Record Fee Payment</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle1" Class="fw-bold">@StudentName</MudText>
+                @if (DueAmount > 0)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Error">Current Balance Due: ₹@DueAmount.ToString("N0")</MudText>
+                }
+            </MudItem>
+            <MudItem xs="12">
+                <MudNumericField T="decimal" @bind-Value="_model.Amount" Label="Payment Amount (₹) *"
+                                 Variant="Variant.Outlined" Margin="Margin.Dense" Min="1" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="PaymentMode" @bind-Value="_model.PaymentMode" Label="Payment Mode *" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudSelectItem Value="PaymentMode.Cash">Cash</MudSelectItem>
+                    <MudSelectItem Value="PaymentMode.UPI">UPI (GPay / PhonePe / Paytm)</MudSelectItem>
+                    <MudSelectItem Value="PaymentMode.BankTransfer">Bank Transfer (NEFT / IMPS)</MudSelectItem>
+                    <MudSelectItem Value="PaymentMode.Cheque">Cheque</MudSelectItem>
+                    <MudSelectItem Value="PaymentMode.Other">Other</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudDatePicker @bind-Date="_date" Label="Payment Received Date" Variant="Variant.Outlined" Margin="Margin.Dense" MaxDate="DateTime.Today" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_model.TransactionRef" Label="Transaction Reference / Cheque No"
+                              Placeholder="e.g. UPI Ref #, Cheque #492812"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_model.Remarks" Label="Remarks / Receipt Notes"
+                              Placeholder="e.g. Tuition fee for October, Term 2 installment"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudCheckBox T="bool" @bind-Value="_model.AutoAllocateToInstallments" Color="Color.Primary" Label="Auto-allocate to earliest pending installments" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Success" Variant="Variant.Filled" OnClick="SavePayment" Disabled="_saving || _model.Amount <= 0">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Recording...</span>
+            }
+            else
+            {
+                <span>Confirm & Generate Receipt</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public int StudentId { get; set; }
+
+    [Parameter]
+    public string StudentName { get; set; } = string.Empty;
+
+    [Parameter]
+    public decimal DueAmount { get; set; }
+
+    private RecordPaymentRequest _model = new();
+    private DateTime? _date = DateTime.Today;
+    private bool _saving = false;
+
+    protected override void OnInitialized()
+    {
+        _model.StudentId = StudentId;
+        _model.Amount = DueAmount > 0 ? DueAmount : 1000;
+        _model.PaymentMode = PaymentMode.Cash;
+        _model.AutoAllocateToInstallments = true;
+    }
+
+    private async Task SavePayment()
+    {
+        _model.PaymentDate = _date ?? DateTime.Today;
+        _saving = true;
+
+        try
+        {
+            var res = await ApiService.RecordPaymentAsync(_model);
+            if (res?.Success == true && res.Data != null)
+            {
+                Snackbar.Add($"Payment of ₹{_model.Amount:N0} recorded! Receipt {res.Data.ReceiptNumber} issued.", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(res.Data.Id));
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to record payment.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

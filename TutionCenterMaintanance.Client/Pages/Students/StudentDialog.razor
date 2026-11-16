@@ -1,0 +1,299 @@
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+
+<MudDialog MaxWidth="MaxWidth.Medium" FullWidth="true">
+    <TitleContent>
+        <div class="d-flex align-center">
+            <MudIcon Icon="@(IsEdit ? Icons.Material.Filled.Edit : Icons.Material.Filled.PersonAdd)" Color="Color.Primary" Class="mr-2" />
+            <MudText Typo="Typo.h6">@(IsEdit ? "Edit Student Profile" : "Register New Student")</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudTabs Elevation="1" Rounded="true" Color="Color.Primary" ApplyEffectsToContainer="true" PanelClass="pa-4">
+            <!-- Tab 1: Student Information -->
+            <MudTabPanel Text="Student Details" Icon="@Icons.Material.Filled.School">
+                <MudGrid>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_model.FirstName" Label="First Name *" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_model.LastName" Label="Last Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="int" @bind-Value="_model.GradeId" Label="Grade / Class *" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            @foreach (var g in _grades)
+                            {
+                                <MudSelectItem Value="@g.Id">@g.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="int" @bind-Value="_model.BoardId" Label="Educational Board *" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            @foreach (var b in _boards)
+                            {
+                                <MudSelectItem Value="@b.Id">@b.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_model.SchoolName" Label="Current School Name *" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudDatePicker @bind-Date="_dob" Label="Date of Birth" Variant="Variant.Outlined" Margin="Margin.Dense" MaxDate="DateTime.Today" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="Gender" @bind-Value="_model.Gender" Label="Gender" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            <MudSelectItem Value="Gender.Male">Male</MudSelectItem>
+                            <MudSelectItem Value="Gender.Female">Female</MudSelectItem>
+                            <MudSelectItem Value="Gender.Other">Other</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_model.BloodGroup" Label="Blood Group (e.g. O+, A+)" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_model.Address" Label="Residential Address" Variant="Variant.Outlined" Margin="Margin.Dense" Lines="2" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_model.MedicalNotes" Label="Medical Notes / Allergies" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_model.PreviousRecords" Label="Previous Academic Records / Reference" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                </MudGrid>
+            </MudTabPanel>
+
+            <!-- Tab 2: Parents Information -->
+            <MudTabPanel Text="Parents & Contacts" Icon="@Icons.Material.Filled.ContactPhone">
+                <MudGrid>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_model.Parent.FatherName" Label="Father's Name *" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_model.Parent.FatherPhone" Label="Father's Phone Number *" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Used for SMS & Primary Calls" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_model.Parent.FatherWhatsApp" Label="Father's WhatsApp Number" Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="For performance & fee updates" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_model.Parent.MotherName" Label="Mother's Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_model.Parent.MotherPhone" Label="Mother's Phone Number" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_model.Parent.MotherWhatsApp" Label="Mother's WhatsApp Number" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_model.Parent.EmergencyContactName" Label="Emergency Contact Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_model.Parent.EmergencyContactPhone" Label="Emergency Contact Phone" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                </MudGrid>
+            </MudTabPanel>
+
+            <!-- Tab 3: Batch Enrollment -->
+            <MudTabPanel Text="Batch Assignment" Icon="@Icons.Material.Filled.Groups">
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                    Select the batches this student is enrolled into:
+                </MudText>
+                @if (_batches.Any())
+                {
+                    <MudGrid>
+                        @foreach (var batch in _batches)
+                        {
+                            var isSelected = _model.BatchIds.Contains(batch.Id);
+                            <MudItem xs="12" sm="6">
+                                <MudCheckBox T="bool" Value="@isSelected" ValueChanged="@((val) => ToggleBatch(batch.Id, val))" Color="Color.Primary">
+                                    <strong>@batch.Name</strong> (@batch.GradeName - @batch.BoardName)
+                                </MudCheckBox>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true">No batches created yet. You can assign batches later.</MudAlert>
+                }
+            </MudTabPanel>
+        </MudTabs>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveStudent" Disabled="_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Save Student</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public int? StudentId { get; set; }
+
+    private bool IsEdit => StudentId.HasValue && StudentId > 0;
+    private CreateStudentRequest _model = new();
+    private DateTime? _dob;
+    private List<GradeDto> _grades = new();
+    private List<BoardDto> _boards = new();
+    private List<BatchDto> _batches = new();
+    private bool _saving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLookups();
+
+        if (IsEdit)
+        {
+            var res = await ApiService.GetStudentByIdAsync(StudentId!.Value);
+            if (res?.Success == true && res.Data != null)
+            {
+                var s = res.Data;
+                _model = new CreateStudentRequest
+                {
+                    FirstName = s.FirstName,
+                    LastName = s.LastName,
+                    DateOfBirth = s.DateOfBirth,
+                    Gender = s.Gender,
+                    BoardId = s.BoardId,
+                    GradeId = s.GradeId,
+                    SchoolName = s.SchoolName,
+                    Address = s.Address,
+                    AdmissionDate = s.AdmissionDate,
+                    BloodGroup = s.BloodGroup,
+                    MedicalNotes = s.MedicalNotes,
+                    PreviousRecords = s.PreviousRecords,
+                    BatchIds = s.BatchIds,
+                    Parent = new ParentInfoDto
+                    {
+                        FatherName = s.Parent.FatherName,
+                        FatherPhone = s.Parent.FatherPhone,
+                        FatherWhatsApp = s.Parent.FatherWhatsApp,
+                        MotherName = s.Parent.MotherName,
+                        MotherPhone = s.Parent.MotherPhone,
+                        MotherWhatsApp = s.Parent.MotherWhatsApp,
+                        EmergencyContactName = s.Parent.EmergencyContactName,
+                        EmergencyContactPhone = s.Parent.EmergencyContactPhone
+                    }
+                };
+                _dob = s.DateOfBirth;
+            }
+        }
+        else
+        {
+            _model.GradeId = _grades.FirstOrDefault()?.Id ?? 1;
+            _model.BoardId = _boards.FirstOrDefault()?.Id ?? 1;
+            _dob = DateTime.Today.AddYears(-10);
+        }
+    }
+
+    private async Task LoadLookups()
+    {
+        var gradesRes = await ApiService.GetGradesAsync();
+        if (gradesRes?.Success == true && gradesRes.Data != null) _grades = gradesRes.Data;
+
+        var boardsRes = await ApiService.GetBoardsAsync();
+        if (boardsRes?.Success == true && boardsRes.Data != null) _boards = boardsRes.Data;
+
+        var batchesRes = await ApiService.GetBatchesAsync();
+        if (batchesRes?.Success == true && batchesRes.Data != null) _batches = batchesRes.Data;
+    }
+
+    private void ToggleBatch(int batchId, bool isSelected)
+    {
+        if (isSelected && !_model.BatchIds.Contains(batchId))
+        {
+            _model.BatchIds.Add(batchId);
+        }
+        else if (!isSelected)
+        {
+            _model.BatchIds.Remove(batchId);
+        }
+    }
+
+    private async Task SaveStudent()
+    {
+        if (string.IsNullOrWhiteSpace(_model.FirstName) || string.IsNullOrWhiteSpace(_model.SchoolName) ||
+            string.IsNullOrWhiteSpace(_model.Parent.FatherName) || string.IsNullOrWhiteSpace(_model.Parent.FatherPhone))
+        {
+            Snackbar.Add("Please fill in all required fields (First Name, School, Father Name & Phone).", Severity.Warning);
+            return;
+        }
+
+        if (_dob.HasValue)
+        {
+            _model.DateOfBirth = _dob.Value;
+        }
+
+        _saving = true;
+        try
+        {
+            if (IsEdit)
+            {
+                var updateReq = new UpdateStudentRequest
+                {
+                    Id = StudentId!.Value,
+                    FirstName = _model.FirstName,
+                    LastName = _model.LastName,
+                    DateOfBirth = _model.DateOfBirth,
+                    Gender = _model.Gender,
+                    BoardId = _model.BoardId,
+                    GradeId = _model.GradeId,
+                    SchoolName = _model.SchoolName,
+                    Address = _model.Address,
+                    AdmissionDate = _model.AdmissionDate,
+                    BloodGroup = _model.BloodGroup,
+                    MedicalNotes = _model.MedicalNotes,
+                    PreviousRecords = _model.PreviousRecords,
+                    BatchIds = _model.BatchIds,
+                    Parent = _model.Parent
+                };
+
+                var res = await ApiService.UpdateStudentAsync(StudentId!.Value, updateReq);
+                if (res?.Success == true)
+                {
+                    Snackbar.Add("Student record updated successfully.", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add(res?.Message ?? "Failed to update student.", Severity.Error);
+                }
+            }
+            else
+            {
+                var res = await ApiService.CreateStudentAsync(_model);
+                if (res?.Success == true)
+                {
+                    Snackbar.Add("Student registered successfully.", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add(res?.Message ?? "Failed to create student.", Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

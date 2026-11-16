@@ -1,0 +1,162 @@
+@page "/assessments"
+@attribute [Authorize]
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject IDialogService DialogService
+
+<PageTitle>Assessments & Tests - Tuition Center</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <div>
+        <MudText Typo="Typo.h5" Class="fw-bold">Tests & School Exams Management</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Define tuition center tests and track school examination schedules</MudText>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialog">
+        Schedule Assessment
+    </MudButton>
+</div>
+
+<!-- Filters -->
+<MudCard Elevation="1" Class="pa-4 mb-4 rounded-lg">
+    <MudGrid>
+        <MudItem xs="12" sm="4">
+            <MudSelect T="int?" @bind-Value="_selectedGradeId" Label="Grade" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                @foreach (var g in _grades)
+                {
+                    <MudSelectItem T="int?" Value="@g.Id">@g.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect T="int?" @bind-Value="_selectedBoardId" Label="Board" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                @foreach (var b in _boards)
+                {
+                    <MudSelectItem T="int?" Value="@b.Id">@b.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4" Class="d-flex align-center gap-2">
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" FullWidth="true" OnClick="LoadAssessments">
+                Apply Filter
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudCard>
+
+<!-- Assessments List -->
+<MudCard Elevation="2" Class="rounded-lg overflow-hidden">
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+
+    <MudTable Items="@_assessments" Dense="true" Hover="true" Striped="true" Elevation="0">
+        <HeaderContent>
+            <MudTh>Assessment Name</MudTh>
+            <MudTh>Type / Category</MudTh>
+            <MudTh>Grade & Board</MudTh>
+            <MudTh>Date</MudTh>
+            <MudTh>Subjects & Max Marks</MudTh>
+            <MudTh Style="text-align: right;">Marks Entry</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Name">
+                <MudText Typo="Typo.subtitle2" Class="fw-bold">@context.Name</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Year: @context.AcademicYearName</MudText>
+            </MudTd>
+            <MudTd DataLabel="Type">
+                <MudChip T="string" Size="Size.Small" Color="@(context.Category == AssessmentCategory.TuitionTest ? Color.Primary : Color.Secondary)" Variant="Variant.Filled">
+                    @context.AssessmentTypeName
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Grade & Board">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">@context.GradeName</MudChip>
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@context.BoardName</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Date">
+                <MudText Typo="Typo.body2">@context.Date.ToString("dd MMM yyyy")</MudText>
+            </MudTd>
+            <MudTd DataLabel="Subjects">
+                @foreach (var sub in context.Subjects)
+                {
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="mr-1 mb-1">
+                        @sub.SubjectName (Max: @sub.MaxMarks)
+                    </MudChip>
+                }
+            </MudTd>
+            <MudTd Style="text-align: right;" DataLabel="Actions">
+                @if (context.Subjects.Any())
+                {
+                    <MudMenu Label="Enter Marks" Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" EndIcon="@Icons.Material.Filled.KeyboardArrowDown">
+                        @foreach (var sub in context.Subjects)
+                        {
+                            <MudMenuItem OnClick="@(() => Navigation.NavigateTo($"/marks/bulk-entry?assessmentSubjectId={sub.Id}"))">
+                                @sub.SubjectName (@sub.MaxMarks Marks)
+                            </MudMenuItem>
+                        }
+                    </MudMenu>
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <div class="pa-8 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.AssignmentLate" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+                <MudText Typo="Typo.h6">No assessments found</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Click "Schedule Assessment" to set up your first test or school exam.</MudText>
+            </div>
+        </NoRecordsContent>
+    </MudTable>
+</MudCard>
+
+@code {
+    private List<AssessmentDto> _assessments = new();
+    private List<GradeDto> _grades = new();
+    private List<BoardDto> _boards = new();
+    private int? _selectedGradeId;
+    private int? _selectedBoardId;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var gRes = await ApiService.GetGradesAsync();
+        if (gRes?.Success == true && gRes.Data != null) _grades = gRes.Data;
+
+        var bRes = await ApiService.GetBoardsAsync();
+        if (bRes?.Success == true && bRes.Data != null) _boards = bRes.Data;
+
+        await LoadAssessments();
+    }
+
+    private async Task LoadAssessments()
+    {
+        _loading = true;
+        try
+        {
+            var res = await ApiService.GetAssessmentsAsync(_selectedGradeId, _selectedBoardId);
+            if (res?.Success == true && res.Data != null)
+            {
+                _assessments = res.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading assessments: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<CreateAssessmentDialog>("Schedule Assessment", options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled)
+        {
+            await LoadAssessments();
+        }
+    }
+}

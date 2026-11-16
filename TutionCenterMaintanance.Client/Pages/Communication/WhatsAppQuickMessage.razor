@@ -1,0 +1,664 @@
+@page "/whatsapp"
+@attribute [Authorize]
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+@inject IDialogService DialogService
+
+<PageTitle>WhatsApp Communication Suite - Tuition Center</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <div>
+        <MudText Typo="Typo.h5" Class="fw-bold">WhatsApp Communication Suite</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Targeted dispatches for overdue fees, attendance absences, exam scores, template manager, and message logs</MudText>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Custom.Brands.WhatsApp" OnClick="RefreshCurrentTab">
+        Refresh Feeds
+    </MudButton>
+</div>
+
+<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" Color="Color.Primary" TabPanelsClass="pa-4">
+    <!-- Tab 1: Targeted Dispatches -->
+    <MudTabPanel Text="Targeted Dispatches" Icon="@Icons.Material.Filled.Send">
+        <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="pt-3">
+            <!-- Sub-tab 1A: Overdue Fee Alerts -->
+            <MudTabPanel Text="Overdue Fee Reminders" Icon="@Icons.Material.Filled.NotificationImportant" BadgeData="@_overdueRecipients.Count" BadgeColor="Color.Error">
+                <div class="d-flex justify-space-between align-center mb-3">
+                    <MudText Typo="Typo.subtitle1" Class="fw-bold">
+                        Parents with Pending Overdue Fees (@_overdueRecipients.Count)
+                    </MudText>
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" OnClick="LoadOverdueRecipients">
+                        Refresh Overdue List
+                    </MudButton>
+                </div>
+
+                @if (_loadingOverdue)
+                {
+                    <MudProgressLinear Color="Color.Error" Indeterminate="true" Class="mb-3" />
+                }
+
+                <MudTable Items="@_overdueRecipients" Dense="true" Hover="true" Striped="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Student</MudTh>
+                        <MudTh>Parent & Contact</MudTh>
+                        <MudTh>Subject / Details</MudTh>
+                        <MudTh>Message Preview</MudTh>
+                        <MudTh Style="text-align: right;">Action</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Student">
+                            <MudText Typo="Typo.subtitle2" Class="fw-bold">@context.StudentName</MudText>
+                            <span style="font-size: 0.75rem; color: #64748b;">@context.GradeName</span>
+                        </MudTd>
+                        <MudTd DataLabel="Parent">
+                            <div>@context.ParentName</div>
+                            <span style="font-family: monospace; font-size: 0.8rem; color: #047857; font-weight: bold;">
+                                @context.RawPhone
+                            </span>
+                        </MudTd>
+                        <MudTd DataLabel="Details">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">
+                                @context.Details
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Preview" Style="max-width: 320px;">
+                            <div style="font-size: 0.75rem; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                @context.RenderedMessage.Replace("\n", " ")
+                            </div>
+                        </MudTd>
+                        <MudTd Style="text-align: right;" DataLabel="Action">
+                            <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
+                                       StartIcon="@Icons.Custom.Brands.WhatsApp"
+                                       OnClick="@(() => SendWhatsApp(context))">
+                                Send WhatsApp
+                            </MudButton>
+                        </MudTd>
+                    </RowTemplate>
+                    <NoRecordsContent>
+                        <div class="pa-6 text-center">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircleOutline" Size="Size.Large" Color="Color.Success" Class="mb-1" />
+                            <MudText Typo="Typo.body1" Color="Color.Success">No overdue fees pending! All parent accounts are up to date.</MudText>
+                        </div>
+                    </NoRecordsContent>
+                </MudTable>
+            </MudTabPanel>
+
+            <!-- Sub-tab 1B: Absent Students Alert -->
+            <MudTabPanel Text="Student Absence Alerts" Icon="@Icons.Material.Filled.EventBusy" BadgeData="@_absentRecipients.Count" BadgeColor="Color.Warning">
+                <div class="d-flex justify-space-between align-center mb-3">
+                    <div class="d-flex align-center gap-3">
+                        <MudText Typo="Typo.subtitle1" Class="fw-bold">
+                            Students Absent on:
+                        </MudText>
+                        <MudDatePicker @bind-Date="_attendanceDate" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                       MaxDate="DateTime.Today" DateFormat="dd MMM yyyy" Style="max-width: 180px;" />
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="LoadAbsentRecipients">
+                            Fetch Absentees
+                        </MudButton>
+                    </div>
+                </div>
+
+                @if (_loadingAbsent)
+                {
+                    <MudProgressLinear Color="Color.Warning" Indeterminate="true" Class="mb-3" />
+                }
+
+                <MudTable Items="@_absentRecipients" Dense="true" Hover="true" Striped="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Student</MudTh>
+                        <MudTh>Grade & Batch</MudTh>
+                        <MudTh>Parent Contact</MudTh>
+                        <MudTh>Date</MudTh>
+                        <MudTh Style="text-align: right;">Action</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Student">
+                            <MudText Typo="Typo.subtitle2" Class="fw-bold">@context.StudentName</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Grade">
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">@context.GradeName</MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Parent">
+                            <div>@context.ParentName</div>
+                            <span style="font-family: monospace; font-size: 0.8rem; color: #047857; font-weight: bold;">
+                                @context.RawPhone
+                            </span>
+                        </MudTd>
+                        <MudTd DataLabel="Date">
+                            <span style="color: #d97706; font-weight: 600;">@context.Details</span>
+                        </MudTd>
+                        <MudTd Style="text-align: right;" DataLabel="Action">
+                            <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
+                                       StartIcon="@Icons.Custom.Brands.WhatsApp"
+                                       OnClick="@(() => SendWhatsApp(context))">
+                                Send Absence Alert
+                            </MudButton>
+                        </MudTd>
+                    </RowTemplate>
+                    <NoRecordsContent>
+                        <div class="pa-6 text-center">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircleOutline" Size="Size.Large" Color="Color.Success" Class="mb-1" />
+                            <MudText Typo="Typo.body1" Color="Color.Success">No absent students recorded for this date.</MudText>
+                        </div>
+                    </NoRecordsContent>
+                </MudTable>
+            </MudTabPanel>
+
+            <!-- Sub-tab 1C: Assessment / Test Score Reports -->
+            <MudTabPanel Text="Exam & Test Results" Icon="@Icons.Material.Filled.Grade">
+                <div class="d-flex align-center gap-3 mb-3 flex-wrap">
+                    <MudSelect T="int" Value="_selectedAssessmentId" ValueChanged="OnAssessmentSelected" Label="Select Assessment / Test" Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width: 280px;">
+                        @foreach (var a in _assessments)
+                        {
+                            <MudSelectItem Value="@a.Id">@a.Name (@a.GradeName - @a.BoardName)</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="LoadAssessmentRecipients" Disabled="_selectedAssessmentId == 0">
+                        Fetch Results Feed
+                    </MudButton>
+                </div>
+
+                @if (_loadingExam)
+                {
+                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-3" />
+                }
+
+                <MudTable Items="@_examRecipients" Dense="true" Hover="true" Striped="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>Student</MudTh>
+                        <MudTh>Parent</MudTh>
+                        <MudTh>Score Breakdown</MudTh>
+                        <MudTh>Message Preview</MudTh>
+                        <MudTh Style="text-align: right;">Action</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Student">
+                            <MudText Typo="Typo.subtitle2" Class="fw-bold">@context.StudentName</MudText>
+                            <span style="font-size: 0.75rem; color: #64748b;">@context.GradeName</span>
+                        </MudTd>
+                        <MudTd DataLabel="Parent">
+                            <div>@context.ParentName</div>
+                            <span style="font-family: monospace; font-size: 0.8rem; color: #047857; font-weight: bold;">
+                                @context.RawPhone
+                            </span>
+                        </MudTd>
+                        <MudTd DataLabel="Score">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                                @context.Details
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Preview" Style="max-width: 320px;">
+                            <div style="font-size: 0.75rem; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                @context.RenderedMessage.Replace("\n", " ")
+                            </div>
+                        </MudTd>
+                        <MudTd Style="text-align: right;" DataLabel="Action">
+                            <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
+                                       StartIcon="@Icons.Custom.Brands.WhatsApp"
+                                       OnClick="@(() => SendWhatsApp(context))">
+                                Send Score Card
+                            </MudButton>
+                        </MudTd>
+                    </RowTemplate>
+                    <NoRecordsContent>
+                        <div class="pa-6 text-center">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Select an assessment to view evaluated students.</MudText>
+                        </div>
+                    </NoRecordsContent>
+                </MudTable>
+            </MudTabPanel>
+        </MudTabs>
+    </MudTabPanel>
+
+    <!-- Tab 2: Message Composer & Quick Broadcaster -->
+    <MudTabPanel Text="Message Composer" Icon="@Icons.Material.Filled.EditNote">
+        <MudGrid>
+            <!-- Composer Form -->
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="0" Outlined="true" Class="pa-4 h-100">
+                    <MudText Typo="Typo.h6" Class="fw-bold mb-3 d-flex align-center">
+                        <MudIcon Icon="@Icons.Custom.Brands.WhatsApp" Color="Color.Success" Class="mr-2" />
+                        Custom Message Composer
+                    </MudText>
+
+                    <!-- Template Selector -->
+                    <MudSelect T="int" Value="_selectedTemplateId" ValueChanged="OnTemplateSelected" Label="Load from Template" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3">
+                        <MudSelectItem Value="0">-- Custom Free-Text --</MudSelectItem>
+                        @foreach (var t in _templates)
+                        {
+                            <MudSelectItem Value="@t.Id">@t.Name (@t.Category)</MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    <MudTextField @bind-Value="_composerText"
+                                  Label="Message Content *"
+                                  Lines="7"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  HelperText="Tags: {StudentName}, {ParentName}, {Grade}, {CenterName}, {CenterPhone}"
+                                  Class="mb-3" />
+
+                    <!-- Live Preview -->
+                    <MudPaper Outlined="true" Class="pa-3 rounded-lg" Style="background-color: #f0fdf4; border-color: #86efac;">
+                        <MudText Typo="Typo.caption" Color="Color.Success" Class="fw-bold d-block mb-1">
+                            LIVE MESSAGE PREVIEW (Sample Student):
+                        </MudText>
+                        <MudText Typo="Typo.body2" Style="white-space: pre-line; color: #14532d; font-size: 0.85rem;">
+                            @GetSamplePreview()
+                        </MudText>
+                    </MudPaper>
+                </MudCard>
+            </MudItem>
+
+            <!-- Recipient Selection -->
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="0" Outlined="true" Class="pa-4 h-100">
+                    <div class="d-flex justify-space-between align-center mb-3">
+                        <MudText Typo="Typo.h6" Class="fw-bold">Recipient Parents</MudText>
+                        <MudSelect T="int?" @bind-Value="_filterBatchId" Label="Filter Batch" Variant="Variant.Outlined" Margin="Margin.Dense" Style="max-width: 180px;" Clearable="true">
+                            @foreach (var b in _batches)
+                            {
+                                <MudSelectItem T="int?" Value="@b.Id">@b.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </div>
+
+                    <MudTable Items="@FilteredStudents" Dense="true" Hover="true" Striped="true" Elevation="0">
+                        <HeaderContent>
+                            <MudTh>Student & Parent</MudTh>
+                            <MudTh>WhatsApp Number</MudTh>
+                            <MudTh Style="text-align: right;">Action</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Student">
+                                <MudText Typo="Typo.subtitle2" Class="fw-bold">@context.FullName</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Parent: @context.FatherName (@context.GradeName)</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="WhatsApp">
+                                @if (!string.IsNullOrEmpty(context.WhatsAppPhone))
+                                {
+                                    <span style="font-family: monospace; color: #047857; font-weight: bold; font-size: 0.85rem;">
+                                        @context.WhatsAppPhone
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span style="color: #94a3b8; font-size: 0.8rem;">No number</span>
+                                }
+                            </MudTd>
+                            <MudTd Style="text-align: right;" DataLabel="Action">
+                                @if (!string.IsNullOrEmpty(context.WhatsAppPhone))
+                                {
+                                    <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
+                                               StartIcon="@Icons.Custom.Brands.WhatsApp"
+                                               OnClick="@(() => SendCustomWhatsApp(context))">
+                                        Send
+                                    </MudButton>
+                                }
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    </MudTabPanel>
+
+    <!-- Tab 3: Template Manager -->
+    <MudTabPanel Text="Templates Manager" Icon="@Icons.Material.Filled.LibraryBooks" BadgeData="@_templates.Count" BadgeColor="Color.Secondary">
+        <div class="d-flex justify-space-between align-center mb-3">
+            <div>
+                <MudText Typo="Typo.subtitle1" Class="fw-bold">Message Templates</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">System templates and center-specific customizable templates</MudText>
+            </div>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateTemplateDialog">
+                Create Template
+            </MudButton>
+        </div>
+
+        <MudTable Items="@_templates" Dense="true" Hover="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>Template Name</MudTh>
+                <MudTh>Category</MudTh>
+                <MudTh>Content Template</MudTh>
+                <MudTh Style="text-align: center;">Type</MudTh>
+                <MudTh Style="text-align: right;">Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Name" Class="fw-bold">@context.Name</MudTd>
+                <MudTd DataLabel="Category">
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">@context.Category</MudChip>
+                </MudTd>
+                <MudTd DataLabel="Content" Style="max-width: 400px;">
+                    <div style="font-size: 0.8rem; color: #334155; white-space: pre-line;">@context.BodyTemplate</div>
+                </MudTd>
+                <MudTd DataLabel="Type" Style="text-align: center;">
+                    @if (context.IsSystem)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Dark" Variant="Variant.Filled">System</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">Custom</MudChip>
+                    }
+                </MudTd>
+                <MudTd Style="text-align: right;" DataLabel="Actions">
+                    @if (!context.IsSystem)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                                       OnClick="@(() => DeleteTemplate(context.Id))" />
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudTabPanel>
+
+    <!-- Tab 4: Dispatched Logs -->
+    <MudTabPanel Text="Dispatched Logs" Icon="@Icons.Material.Filled.History" BadgeData="@_logs.Count" BadgeColor="Color.Default">
+        <div class="d-flex justify-space-between align-center mb-3">
+            <MudText Typo="Typo.subtitle1" Class="fw-bold">WhatsApp Dispatch Activity Log</MudText>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" OnClick="LoadLogs">
+                Refresh Logs
+            </MudButton>
+        </div>
+
+        <MudTable Items="@_logs" Dense="true" Hover="true" Striped="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>Timestamp</MudTh>
+                <MudTh>Recipient Name</MudTh>
+                <MudTh>Phone Number</MudTh>
+                <MudTh>Student</MudTh>
+                <MudTh>Category</MudTh>
+                <MudTh>Message Body</MudTh>
+                <MudTh>Dispatched By</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Time" Style="white-space: nowrap; font-size: 0.8rem;">
+                    @context.SentAt.ToString("dd MMM yyyy, hh:mm tt")
+                </MudTd>
+                <MudTd DataLabel="Recipient" Class="fw-bold">@context.RecipientName</MudTd>
+                <MudTd DataLabel="Phone">
+                    <span style="font-family: monospace; color: #047857; font-weight: bold;">@context.RecipientPhone</span>
+                </MudTd>
+                <MudTd DataLabel="Student">@(context.StudentName ?? "-")</MudTd>
+                <MudTd DataLabel="Category">
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">@context.MessageCategory</MudChip>
+                </MudTd>
+                <MudTd DataLabel="Body" Style="max-width: 350px;">
+                    <div style="font-size: 0.75rem; color: #475569; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        @context.MessageBody.Replace("\n", " ")
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="By">@context.SentByName</MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <div class="pa-6 text-center">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">No message dispatches logged yet.</MudText>
+                </div>
+            </NoRecordsContent>
+        </MudTable>
+    </MudTabPanel>
+</MudTabs>
+
+@code {
+    private List<BulkWhatsAppRecipientDto> _overdueRecipients = new();
+    private List<BulkWhatsAppRecipientDto> _absentRecipients = new();
+    private List<BulkWhatsAppRecipientDto> _examRecipients = new();
+    private List<WhatsAppTemplateDto> _templates = new();
+    private List<WhatsAppMessageLogDto> _logs = new();
+    private List<StudentListItemDto> _students = new();
+    private List<BatchDto> _batches = new();
+    private List<AssessmentDto> _assessments = new();
+
+    private DateTime? _attendanceDate = DateTime.Today;
+    private int _selectedAssessmentId = 0;
+    private int _selectedTemplateId = 0;
+    private int? _filterBatchId;
+    private string _composerText = "Dear {ParentName},\n\nNotice from {CenterName} regarding {StudentName} ({Grade}):\n\nPlease let us know if you have any questions.\n\nWarm regards,\n{CenterName}";
+    private CenterSettingsDto? _settings;
+
+    private bool _loadingOverdue = false;
+    private bool _loadingAbsent = false;
+    private bool _loadingExam = false;
+
+    private IEnumerable<StudentListItemDto> FilteredStudents =>
+        _filterBatchId.HasValue
+            ? _students.Where(s => s.BatchNames.Any())
+            : _students;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var sRes = await ApiService.GetSettingsAsync();
+        if (sRes?.Success == true) _settings = sRes.Data;
+
+        var stuRes = await ApiService.GetStudentsAsync(pageSize: 200);
+        if (stuRes?.Success == true && stuRes.Data != null) _students = stuRes.Data.Items;
+
+        var bRes = await ApiService.GetBatchesAsync();
+        if (bRes?.Success == true && bRes.Data != null) _batches = bRes.Data;
+
+        var aRes = await ApiService.GetAssessmentsAsync();
+        if (aRes?.Success == true && aRes.Data != null) _assessments = aRes.Data;
+
+        await LoadTemplates();
+        await LoadOverdueRecipients();
+        await LoadAbsentRecipients();
+        await LoadLogs();
+    }
+
+    private async Task RefreshCurrentTab()
+    {
+        await LoadOverdueRecipients();
+        await LoadAbsentRecipients();
+        if (_selectedAssessmentId > 0) await LoadAssessmentRecipients();
+        await LoadLogs();
+        await LoadTemplates();
+    }
+
+    private async Task LoadTemplates()
+    {
+        var res = await ApiService.GetWhatsAppTemplatesAsync();
+        if (res?.Success == true && res.Data != null)
+        {
+            _templates = res.Data;
+        }
+    }
+
+    private async Task LoadLogs()
+    {
+        var res = await ApiService.GetWhatsAppLogsAsync();
+        if (res?.Success == true && res.Data != null)
+        {
+            _logs = res.Data;
+        }
+    }
+
+    private async Task LoadOverdueRecipients()
+    {
+        _loadingOverdue = true;
+        try
+        {
+            var res = await ApiService.GetOverdueFeeRecipientsAsync();
+            if (res?.Success == true && res.Data != null)
+            {
+                _overdueRecipients = res.Data;
+            }
+        }
+        catch { }
+        finally
+        {
+            _loadingOverdue = false;
+        }
+    }
+
+    private async Task LoadAbsentRecipients()
+    {
+        _loadingAbsent = true;
+        try
+        {
+            var res = await ApiService.GetAbsentStudentRecipientsAsync(_attendanceDate);
+            if (res?.Success == true && res.Data != null)
+            {
+                _absentRecipients = res.Data;
+            }
+        }
+        catch { }
+        finally
+        {
+            _loadingAbsent = false;
+        }
+    }
+
+    private async Task OnAssessmentSelected(int assessmentId)
+    {
+        _selectedAssessmentId = assessmentId;
+        await LoadAssessmentRecipients();
+    }
+
+    private async Task LoadAssessmentRecipients()
+    {
+        if (_selectedAssessmentId == 0) return;
+        _loadingExam = true;
+        try
+        {
+            var res = await ApiService.GetAssessmentResultRecipientsAsync(_selectedAssessmentId);
+            if (res?.Success == true && res.Data != null)
+            {
+                _examRecipients = res.Data;
+            }
+        }
+        catch { }
+        finally
+        {
+            _loadingExam = false;
+        }
+    }
+
+    private void OnTemplateSelected(int templateId)
+    {
+        _selectedTemplateId = templateId;
+        var t = _templates.FirstOrDefault(x => x.Id == templateId);
+        if (t != null)
+        {
+            _composerText = t.BodyTemplate;
+        }
+    }
+
+    private string GetSamplePreview()
+    {
+        var center = _settings?.CenterName ?? "Bright Minds Tuition Center";
+        var phone = _settings?.Phone ?? "+91 98765 43210";
+        return _composerText
+            .Replace("{StudentName}", "Aarav Sharma")
+            .Replace("{ParentName}", "Mr. Rajesh Sharma")
+            .Replace("{Grade}", "Grade 10")
+            .Replace("{CenterName}", center)
+            .Replace("{CenterPhone}", phone);
+    }
+
+    private async Task SendWhatsApp(BulkWhatsAppRecipientDto item)
+    {
+        if (!item.HasValidPhone)
+        {
+            Snackbar.Add("No valid phone number for recipient", Severity.Warning);
+            return;
+        }
+
+        await JS.InvokeVoidAsync("open", item.WhatsAppUrl, "_blank");
+
+        // Log the message dispatch
+        await ApiService.LogWhatsAppDispatchAsync(new LogWhatsAppDispatchDto
+        {
+            StudentId = item.StudentId,
+            RecipientName = item.ParentName,
+            RecipientPhone = item.RawPhone,
+            MessageCategory = item.Category,
+            MessageBody = item.RenderedMessage
+        });
+
+        item.IsSent = true;
+        Snackbar.Add($"WhatsApp opened for {item.StudentName} & logged", Severity.Success);
+        await LoadLogs();
+    }
+
+    private async Task SendCustomWhatsApp(StudentListItemDto student)
+    {
+        if (string.IsNullOrEmpty(student.WhatsAppPhone))
+        {
+            Snackbar.Add("No WhatsApp number for this student's parent", Severity.Warning);
+            return;
+        }
+
+        var center = _settings?.CenterName ?? "Bright Minds Tuition Center";
+        var centerPhone = _settings?.Phone ?? "+91 98765 43210";
+
+        var formatted = _composerText
+            .Replace("{StudentName}", student.FullName)
+            .Replace("{ParentName}", student.FatherName)
+            .Replace("{Grade}", student.GradeName)
+            .Replace("{CenterName}", center)
+            .Replace("{CenterPhone}", centerPhone);
+
+        var cleanPhone = student.WhatsAppPhone.Replace("+", "").Replace(" ", "").Replace("-", "");
+        if (cleanPhone.Length == 10) cleanPhone = "91" + cleanPhone;
+
+        var encoded = Uri.EscapeDataString(formatted);
+        var url = $"https://wa.me/{cleanPhone}?text={encoded}";
+
+        await JS.InvokeVoidAsync("open", url, "_blank");
+
+        await ApiService.LogWhatsAppDispatchAsync(new LogWhatsAppDispatchDto
+        {
+            StudentId = student.Id,
+            RecipientName = student.FatherName,
+            RecipientPhone = student.WhatsAppPhone,
+            MessageCategory = "CustomMessage",
+            MessageBody = formatted
+        });
+
+        Snackbar.Add($"Message dispatched to {student.FatherName}", Severity.Success);
+        await LoadLogs();
+    }
+
+    private async Task OpenCreateTemplateDialog()
+    {
+        var template = new CreateOrUpdateTemplateRequest
+        {
+            Name = "",
+            Category = "General",
+            BodyTemplate = "Dear {ParentName},\n\nNotice from {CenterName} regarding {StudentName}:\n[Message Details Here]\n\nRegards,\n{CenterName}"
+        };
+
+        var parameters = new DialogParameters { ["TemplateModel"] = template };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+
+        // Simple inline prompt via MessageBox
+        bool? result = await DialogService.ShowMessageBoxAsync(
+            "Create Custom Template",
+            "To add a custom template, fill in the details. Confirm to proceed?",
+            yesText: "Create Preset", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            var res = await ApiService.CreateWhatsAppTemplateAsync(template);
+            if (res?.Success == true)
+            {
+                Snackbar.Add("New template added!", Severity.Success);
+                await LoadTemplates();
+            }
+        }
+    }
+
+    private async Task DeleteTemplate(int id)
+    {
+        var res = await ApiService.DeleteWhatsAppTemplateAsync(id);
+        if (res?.Success == true)
+        {
+            Snackbar.Add("Template deleted", Severity.Info);
+            await LoadTemplates();
+        }
+        else
+        {
+            Snackbar.Add(res?.Message ?? "Could not delete template", Severity.Error);
+        }
+    }
+}

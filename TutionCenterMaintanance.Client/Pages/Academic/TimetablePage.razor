@@ -1,0 +1,346 @@
+@page "/timetable"
+@attribute [Authorize]
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IJSRuntime JS
+
+<PageTitle>Weekly Timetable & Schedule - Tuition Center</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <div>
+        <MudText Typo="Typo.h5" Class="fw-bold">Class Timetable & Schedules</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Weekly schedule per batch, teacher allotments, and classroom periods</MudText>
+    </div>
+    <div class="d-flex gap-2">
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Print" OnClick="PrintTimetable">
+            Print Timetable
+        </MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateSlotDialog">
+            Add Class Slot
+        </MudButton>
+    </div>
+</div>
+
+<!-- Filters Bar -->
+<MudCard Elevation="0" Outlined="true" Class="pa-3 mb-4">
+    <MudGrid Class="align-center">
+        <MudItem xs="12" sm="5">
+            <MudSelect T="int?" Value="_selectedBatchId" ValueChanged="OnBatchChanged" Label="Select Batch *" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                @foreach (var b in _batches)
+                {
+                    <MudSelectItem T="int?" Value="@b.Id">@b.Name (@b.GradeName - @b.BoardName)</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="5">
+            <MudSelect T="int?" Value="_selectedTeacherId" ValueChanged="OnTeacherChanged" Label="Filter Teacher" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                @foreach (var t in _teachers)
+                {
+                    <MudSelectItem T="int?" Value="@t.Id">@t.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="2" Class="text-right">
+            <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadSlots">
+                Refresh
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudCard>
+
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+}
+
+<!-- Weekly Timetable Grid -->
+<div id="timetable-print-area">
+    <MudGrid Spacing="3">
+        @foreach (var day in _weekdays)
+        {
+            var daySlots = _slots.Where(s => s.DayOfWeek == day).OrderBy(s => s.StartTime).ToList();
+
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Elevation="2" Class="h-100 rounded-lg overflow-hidden border-t-4" Style="@($"border-top: 4px solid {GetDayColor(day)};")">
+                    <MudCardHeader Class="py-2 px-3" Style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                        <CardHeaderContent>
+                            <div class="d-flex justify-space-between align-center">
+                                <MudText Typo="Typo.subtitle1" Class="fw-bold" Style="@($"color: {GetDayColor(day)};")">
+                                    @day.ToString()
+                                </MudText>
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                    @daySlots.Count @(daySlots.Count == 1 ? "Period" : "Periods")
+                                </MudChip>
+                            </div>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent Class="pa-3">
+                        @if (!daySlots.Any())
+                        {
+                            <div class="pa-4 text-center">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">No classes scheduled</MudText>
+                            </div>
+                        }
+                        else
+                        {
+                            @foreach (var slot in daySlots)
+                            {
+                                <div class="pa-2 mb-2 rounded" style="background-color: #f1f5f9; border-left: 3px solid #3b82f6;">
+                                    <div class="d-flex justify-space-between align-center">
+                                        <MudText Typo="Typo.subtitle2" Class="fw-bold" Color="Color.Dark">
+                                            @slot.SubjectName
+                                        </MudText>
+                                        <div class="d-flex gap-1">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                                           OnClick="@(() => DeleteSlot(slot.Id))" />
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-center justify-space-between mt-1" style="font-size: 0.78rem; color: #475569;">
+                                        <span>
+                                            <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" Class="mr-1" Style="font-size: 13px; vertical-align: text-bottom;" />
+                                            @slot.TimeFormatted
+                                        </span>
+                                        <span>
+                                            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-1" Style="font-size: 13px; vertical-align: text-bottom;" />
+                                            @slot.TeacherName
+                                        </span>
+                                    </div>
+                                    @if (!_selectedBatchId.HasValue)
+                                    {
+                                        <div class="mt-1" style="font-size: 0.72rem; color: #64748b;">
+                                            Batch: @slot.BatchName (@slot.GradeName)
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        }
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+</div>
+
+<!-- Create Slot Dialog -->
+<MudDialog @bind-Visible="_showDialog">
+    <TitleContent>
+        <div class="d-flex align-center">
+            <MudIcon Icon="@Icons.Material.Filled.AddAlarm" Color="Color.Primary" Class="mr-2" />
+            <MudText Typo="Typo.h6">Add Class Schedule Slot</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudSelect T="int" @bind-Value="_slotModel.BatchId" Label="Class Batch *" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var b in _batches)
+                    {
+                        <MudSelectItem Value="@b.Id">@b.Name (@b.GradeName - @b.BoardName)</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="int" @bind-Value="_slotModel.SubjectId" Label="Subject *" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var s in _subjects)
+                    {
+                        <MudSelectItem Value="@s.Id">@s.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="int" @bind-Value="_slotModel.TeacherId" Label="Assigned Teacher *" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var t in _teachers)
+                    {
+                        <MudSelectItem Value="@t.Id">@t.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12">
+                <MudSelect T="DayOfWeek" @bind-Value="_slotModel.DayOfWeek" Label="Day of Week *" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var d in _weekdays)
+                    {
+                        <MudSelectItem Value="@d">@d.ToString()</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_startTimeStr" Label="Start Time (e.g. 17:00) *" Placeholder="17:00" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_endTimeStr" Label="End Time (e.g. 18:30) *" Placeholder="18:30" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveSlot" Disabled="_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Save Slot</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private List<TimetableSlotDto> _slots = new();
+    private List<BatchDto> _batches = new();
+    private List<SubjectDto> _subjects = new();
+    private List<TeacherDto> _teachers = new();
+
+    private int? _selectedBatchId;
+    private int? _selectedTeacherId;
+    private bool _loading = true;
+    private bool _showDialog = false;
+    private bool _saving = false;
+
+    private CreateOrUpdateTimetableRequest _slotModel = new();
+    private string _startTimeStr = "17:00";
+    private string _endTimeStr = "18:30";
+
+    private readonly DayOfWeek[] _weekdays = new[]
+    {
+        DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday,
+        DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var bRes = await ApiService.GetBatchesAsync();
+        if (bRes?.Success == true && bRes.Data != null) _batches = bRes.Data;
+
+        var sRes = await ApiService.GetSubjectsAsync();
+        if (sRes?.Success == true && sRes.Data != null) _subjects = sRes.Data;
+
+        var tRes = await ApiService.GetTeachersAsync();
+        if (tRes?.Success == true && tRes.Data != null) _teachers = tRes.Data;
+
+        if (_batches.Any())
+        {
+            _selectedBatchId = _batches.First().Id;
+        }
+
+        await LoadSlots();
+    }
+
+    private async Task OnBatchChanged(int? batchId)
+    {
+        _selectedBatchId = batchId;
+        await LoadSlots();
+    }
+
+    private async Task OnTeacherChanged(int? teacherId)
+    {
+        _selectedTeacherId = teacherId;
+        await LoadSlots();
+    }
+
+    private async Task LoadSlots()
+    {
+        _loading = true;
+        try
+        {
+            var res = await ApiService.GetTimetableAsync(_selectedBatchId, _selectedTeacherId);
+            if (res?.Success == true && res.Data != null)
+            {
+                _slots = res.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading timetable: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OpenCreateSlotDialog()
+    {
+        _slotModel = new CreateOrUpdateTimetableRequest
+        {
+            BatchId = _selectedBatchId ?? (_batches.FirstOrDefault()?.Id ?? 0),
+            SubjectId = _subjects.FirstOrDefault()?.Id ?? 0,
+            TeacherId = _selectedTeacherId ?? (_teachers.FirstOrDefault()?.Id ?? 0),
+            DayOfWeek = DayOfWeek.Monday,
+            StartTime = new TimeSpan(17, 0, 0),
+            EndTime = new TimeSpan(18, 30, 0)
+        };
+        _startTimeStr = "17:00";
+        _endTimeStr = "18:30";
+        _showDialog = true;
+    }
+
+    private async Task SaveSlot()
+    {
+        if (_slotModel.BatchId == 0 || _slotModel.SubjectId == 0 || _slotModel.TeacherId == 0)
+        {
+            Snackbar.Add("Please fill all required fields", Severity.Warning);
+            return;
+        }
+
+        if (TimeSpan.TryParse(_startTimeStr, out var start)) _slotModel.StartTime = start;
+        if (TimeSpan.TryParse(_endTimeStr, out var end)) _slotModel.EndTime = end;
+
+        _saving = true;
+        try
+        {
+            var res = await ApiService.CreateTimetableSlotAsync(_slotModel);
+            if (res?.Success == true)
+            {
+                Snackbar.Add("Timetable slot created!", Severity.Success);
+                _showDialog = false;
+                await LoadSlots();
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Could not create slot", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task DeleteSlot(int id)
+    {
+        bool? confirm = await DialogService.ShowMessageBoxAsync("Delete Slot", "Are you sure you want to remove this timetable slot?", yesText: "Delete", cancelText: "Cancel");
+        if (confirm == true)
+        {
+            var res = await ApiService.DeleteTimetableSlotAsync(id);
+            if (res?.Success == true)
+            {
+                Snackbar.Add("Slot removed", Severity.Info);
+                await LoadSlots();
+            }
+        }
+    }
+
+    private async Task PrintTimetable()
+    {
+        await JS.InvokeVoidAsync("window.print");
+    }
+
+    private static string GetDayColor(DayOfWeek day) => day switch
+    {
+        DayOfWeek.Monday => "#2563eb",
+        DayOfWeek.Tuesday => "#0891b2",
+        DayOfWeek.Wednesday => "#059669",
+        DayOfWeek.Thursday => "#d97706",
+        DayOfWeek.Friday => "#7c3aed",
+        DayOfWeek.Saturday => "#db2777",
+        _ => "#475569"
+    };
+}

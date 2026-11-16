@@ -1,0 +1,148 @@
+@page "/audit"
+@attribute [Authorize]
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Audit Trail Logs - Tuition Center</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <div>
+        <MudText Typo="Typo.h5" Class="fw-bold">System Audit Trail & Security Activity</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Tamper-evident logs of data modifications, student enrollments, fee records, and marks changes</MudText>
+    </div>
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadLogs">
+        Refresh Logs
+    </MudButton>
+</div>
+
+<!-- Filter Bar -->
+<MudCard Elevation="0" Outlined="true" Class="pa-3 mb-4">
+    <MudGrid Class="align-center">
+        <MudItem xs="12" sm="5">
+            <MudSelect T="string" Value="_filterEntity" ValueChanged="OnEntityChanged" Label="Filter by Entity" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                <MudSelectItem Value="@("Student")">Student</MudSelectItem>
+                <MudSelectItem Value="@("Payment")">Payment</MudSelectItem>
+                <MudSelectItem Value="@("Mark")">Marks</MudSelectItem>
+                <MudSelectItem Value="@("Homework")">Homework</MudSelectItem>
+                <MudSelectItem Value="@("FeePlan")">Fee Plan</MudSelectItem>
+                <MudSelectItem Value="@("Timetable")">Timetable</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="5">
+            <MudSelect T="string" Value="_filterAction" ValueChanged="OnActionChanged" Label="Filter by Action" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                <MudSelectItem Value="@("Create")">Create</MudSelectItem>
+                <MudSelectItem Value="@("Update")">Update</MudSelectItem>
+                <MudSelectItem Value="@("Delete")">Delete</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+    </MudGrid>
+</MudCard>
+
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-3" />
+}
+
+<MudTable Items="_logs" Dense="true" Hover="true" Striped="true" Elevation="1" Class="rounded-lg">
+    <HeaderContent>
+        <MudTh>Timestamp</MudTh>
+        <MudTh>Staff User</MudTh>
+        <MudTh>Entity</MudTh>
+        <MudTh Style="text-align: center;">Action</MudTh>
+        <MudTh>Entity ID</MudTh>
+        <MudTh>Changes Details</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Timestamp" Style="white-space: nowrap; font-size: 0.8rem;">
+            @context.Timestamp.ToString("dd MMM yyyy, hh:mm tt")
+        </MudTd>
+        <MudTd DataLabel="User">
+            <span class="fw-bold" style="color: #1e3a8a;">@context.UserName</span>
+        </MudTd>
+        <MudTd DataLabel="Entity">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
+                @context.EntityName
+            </MudChip>
+        </MudTd>
+        <MudTd DataLabel="Action" Style="text-align: center;">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@GetActionColor(context.Action)">
+                @context.Action
+            </MudChip>
+        </MudTd>
+        <MudTd DataLabel="Entity ID">
+            <span style="font-family: monospace; font-size: 0.8rem;">@context.EntityId</span>
+        </MudTd>
+        <MudTd DataLabel="Changes" Style="max-width: 320px;">
+            @if (!string.IsNullOrEmpty(context.NewValues))
+            {
+                <span style="font-size: 0.75rem; color: #475569; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">
+                    @context.NewValues
+                </span>
+            }
+            else
+            {
+                <span style="color: #94a3b8; font-size: 0.75rem;">-</span>
+            }
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <div class="pa-6 text-center">
+            <MudIcon Icon="@Icons.Material.Filled.HistoryToggleOff" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+            <MudText Typo="Typo.body1" Color="Color.Secondary">No audit activity logged matching the filter criteria.</MudText>
+        </div>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<AuditLogDto> _logs = new();
+    private string? _filterEntity;
+    private string? _filterAction;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLogs();
+    }
+
+    private async Task OnEntityChanged(string? val)
+    {
+        _filterEntity = val;
+        await LoadLogs();
+    }
+
+    private async Task OnActionChanged(string? val)
+    {
+        _filterAction = val;
+        await LoadLogs();
+    }
+
+    private async Task LoadLogs()
+    {
+        _loading = true;
+        try
+        {
+            var res = await ApiService.GetAuditLogsAsync(_filterEntity, _filterAction);
+            if (res?.Success == true && res.Data != null)
+            {
+                _logs = res.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading audit logs: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static Color GetActionColor(string action) => action switch
+    {
+        "Create" => Color.Success,
+        "Update" => Color.Warning,
+        "Delete" => Color.Error,
+        _ => Color.Default
+    };
+}

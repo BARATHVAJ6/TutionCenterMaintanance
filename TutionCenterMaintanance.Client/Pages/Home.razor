@@ -1,0 +1,221 @@
+@page "/"
+@attribute [Authorize]
+@inject IApiService ApiService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<PageTitle>Dashboard - Tuition Center</PageTitle>
+
+<div class="mb-4 d-flex justify-space-between align-center">
+    <div>
+        <MudText Typo="Typo.h5" Class="fw-bold">Center Overview & Operations</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Real-time summary of students, performance, fees, and attendance</MudText>
+    </div>
+    <div class="d-flex gap-2">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="@(() => Navigation.NavigateTo("/students"))">
+            Add Student
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.FactCheck" OnClick="@(() => Navigation.NavigateTo("/attendance"))">
+            Mark Attendance
+        </MudButton>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+}
+else if (_stats != null)
+{
+    <!-- Stat KPI Cards -->
+    <MudGrid Class="mb-6">
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2" Class="pa-4 rounded-xl border-l-4 border-l-primary">
+                <div class="d-flex justify-space-between align-center">
+                    <div>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="fw-bold">ACTIVE STUDENTS</MudText>
+                        <MudText Typo="Typo.h4" Class="fw-bold mt-1">@_stats.TotalActiveStudents</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Primary">UKG to Grade 12</MudText>
+                    </div>
+                    <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Large">
+                        <MudIcon Icon="@Icons.Material.Filled.People" />
+                    </MudAvatar>
+                </div>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2" Class="pa-4 rounded-xl border-l-4 border-l-success">
+                <div class="d-flex justify-space-between align-center">
+                    <div>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="fw-bold">TODAY'S ATTENDANCE</MudText>
+                        <MudText Typo="Typo.h4" Class="fw-bold mt-1">@_stats.TodayAttendancePercentage%</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Success">@_stats.TodayPresentCount Present / @_stats.TodayAbsentCount Absent</MudText>
+                    </div>
+                    <MudAvatar Color="Color.Success" Variant="Variant.Filled" Size="Size.Large">
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" />
+                    </MudAvatar>
+                </div>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2" Class="pa-4 rounded-xl border-l-4 border-l-info">
+                <div class="d-flex justify-space-between align-center">
+                    <div>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="fw-bold">FEES COLLECTED (MONTH)</MudText>
+                        <MudText Typo="Typo.h4" Class="fw-bold mt-1">₹@_stats.TotalFeesCollectedMonth.ToString("N0")</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Info">Collected this month</MudText>
+                    </div>
+                    <MudAvatar Color="Color.Info" Variant="Variant.Filled" Size="Size.Large">
+                        <MudIcon Icon="@Icons.Material.Filled.CurrencyRupee" />
+                    </MudAvatar>
+                </div>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2" Class="pa-4 rounded-xl border-l-4 border-l-warning">
+                <div class="d-flex justify-space-between align-center">
+                    <div>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="fw-bold">ACTIVE BATCHES</MudText>
+                        <MudText Typo="Typo.h4" Class="fw-bold mt-1">@_stats.TotalBatches</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Warning">@_stats.TotalTeachers Teachers</MudText>
+                    </div>
+                    <MudAvatar Color="Color.Warning" Variant="Variant.Filled" Size="Size.Large">
+                        <MudIcon Icon="@Icons.Material.Filled.Groups" />
+                    </MudAvatar>
+                </div>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <MudGrid>
+        <!-- Quick Action Tiles -->
+        <MudItem xs="12" md="7">
+            <MudCard Elevation="2" Class="pa-4 rounded-xl h-100">
+                <MudText Typo="Typo.h6" Class="fw-bold mb-3">Quick Operations</MudText>
+                <MudGrid>
+                    <MudItem xs="6" sm="4">
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" Class="py-3 flex-column h-100"
+                                   OnClick="@(() => Navigation.NavigateTo("/students"))">
+                            <MudIcon Icon="@Icons.Material.Filled.School" Size="Size.Large" Class="mb-1" />
+                            <MudText Typo="Typo.body2">Student Records</MudText>
+                        </MudButton>
+                    </MudItem>
+                    <MudItem xs="6" sm="4">
+                        <MudButton Variant="Variant.Outlined" Color="Color.Success" FullWidth="true" Class="py-3 flex-column h-100"
+                                   OnClick="@(() => Navigation.NavigateTo("/marks/bulk-entry"))">
+                            <MudIcon Icon="@Icons.Material.Filled.Scoreboard" Size="Size.Large" Class="mb-1" />
+                            <MudText Typo="Typo.body2">Enter Marks</MudText>
+                        </MudButton>
+                    </MudItem>
+                    <MudItem xs="6" sm="4">
+                        <MudButton Variant="Variant.Outlined" Color="Color.Info" FullWidth="true" Class="py-3 flex-column h-100"
+                                   OnClick="@(() => Navigation.NavigateTo("/fees"))">
+                            <MudIcon Icon="@Icons.Material.Filled.Receipt" Size="Size.Large" Class="mb-1" />
+                            <MudText Typo="Typo.body2">Record Payment</MudText>
+                        </MudButton>
+                    </MudItem>
+                    <MudItem xs="6" sm="4">
+                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" FullWidth="true" Class="py-3 flex-column h-100"
+                                   OnClick="@(() => Navigation.NavigateTo("/report-cards"))">
+                            <MudIcon Icon="@Icons.Material.Filled.Assessment" Size="Size.Large" Class="mb-1" />
+                            <MudText Typo="Typo.body2">Report Cards</MudText>
+                        </MudButton>
+                    </MudItem>
+                    <MudItem xs="6" sm="4">
+                        <MudButton Variant="Variant.Outlined" Color="Color.Success" FullWidth="true" Class="py-3 flex-column h-100"
+                                   OnClick="@(() => Navigation.NavigateTo("/whatsapp"))">
+                            <MudIcon Icon="@Icons.Custom.Brands.WhatsApp" Size="Size.Large" Class="mb-1" />
+                            <MudText Typo="Typo.body2">WhatsApp Parent</MudText>
+                        </MudButton>
+                    </MudItem>
+                    <MudItem xs="6" sm="4">
+                        <MudButton Variant="Variant.Outlined" Color="Color.Dark" FullWidth="true" Class="py-3 flex-column h-100"
+                                   OnClick="@(() => Navigation.NavigateTo("/batches"))">
+                            <MudIcon Icon="@Icons.Material.Filled.Class" Size="Size.Large" Class="mb-1" />
+                            <MudText Typo="Typo.body2">Manage Batches</MudText>
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+            </MudCard>
+        </MudItem>
+
+        <!-- Upcoming Tests / School Exams -->
+        <MudItem xs="12" md="5">
+            <MudCard Elevation="2" Class="pa-4 rounded-xl h-100">
+                <div class="d-flex justify-space-between align-center mb-3">
+                    <MudText Typo="Typo.h6" Class="fw-bold">Upcoming Assessments</MudText>
+                    <MudButton Size="Size.Small" Color="Color.Primary" OnClick="@(() => Navigation.NavigateTo("/assessments"))">
+                        View All
+                    </MudButton>
+                </div>
+
+                @if (_stats.UpcomingAssessments?.Any() == true)
+                {
+                    <MudList T="UpcomingAssessmentDto" Dense="true">
+                        @foreach (var test in _stats.UpcomingAssessments)
+                        {
+                            <MudListItem Icon="@Icons.Material.Filled.EventNote" IconColor="Color.Primary">
+                                <div class="d-flex justify-space-between align-center">
+                                    <div>
+                                        <MudText Typo="Typo.subtitle2" Class="fw-bold">@test.Name</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            @test.GradeName • @test.SubjectCount Subjects
+                                        </MudText>
+                                    </div>
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                                        @test.Date.ToString("MMM dd")
+                                    </MudChip>
+                                </div>
+                            </MudListItem>
+                            <MudDivider />
+                        }
+                    </MudList>
+                }
+                else
+                {
+                    <div class="pa-6 text-center">
+                        <MudIcon Icon="@Icons.Material.Filled.EventAvailable" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">No upcoming assessments scheduled.</MudText>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Class="mt-2" OnClick="@(() => Navigation.NavigateTo("/assessments"))">
+                            Schedule a Test
+                        </MudButton>
+                    </div>
+                }
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    private DashboardStatsDto? _stats;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboard();
+    }
+
+    private async Task LoadDashboard()
+    {
+        _loading = true;
+        try
+        {
+            var res = await ApiService.GetDashboardStatsAsync();
+            if (res?.Success == true)
+            {
+                _stats = res.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading dashboard: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

@@ -1,0 +1,307 @@
+@page "/users"
+@attribute [Authorize]
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>User Management & IAM - Tuition Center</PageTitle>
+
+<div class="mb-4">
+    <MudText Typo="Typo.h5" Class="fw-bold">User Accounts & Access Control (IAM)</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary">Manage admin & sub-admin staff credentials and define fine-grained role permissions</MudText>
+</div>
+
+<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" Color="Color.Primary" PanelClass="pa-4">
+    <!-- Tab 1: Staff / Admin User Accounts -->
+    <MudTabPanel Text="Staff Users" Icon="@Icons.Material.Filled.ManageAccounts">
+        <div class="d-flex justify-space-between align-center mb-4">
+            <MudText Typo="Typo.h6">System Users</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="OpenCreateUserDialog">
+                Create User
+            </MudButton>
+        </div>
+
+        <MudTable Items="@_users" Dense="true" Hover="true" Striped="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>User</MudTh>
+                <MudTh>Username</MudTh>
+                <MudTh>Email</MudTh>
+                <MudTh>Assigned Role</MudTh>
+                <MudTh>Status</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    <div class="d-flex align-center">
+                        <MudAvatar Color="Color.Primary" Size="Size.Small" Class="mr-2">
+                            @context.FullName.Substring(0, 1).ToUpper()
+                        </MudAvatar>
+                        <strong>@context.FullName</strong>
+                    </div>
+                </MudTd>
+                <MudTd><code>@context.UserName</code></MudTd>
+                <MudTd>@context.Email</MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Filled">
+                        @context.RoleName
+                    </MudChip>
+                </MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small" Color="@(context.IsActive ? Color.Success : Color.Error)" Variant="Variant.Outlined">
+                        @(context.IsActive ? "Active" : "Disabled")
+                    </MudChip>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudTabPanel>
+
+    <!-- Tab 2: Custom Roles & Granular Permissions Matrix -->
+    <MudTabPanel Text="Roles & Permissions Matrix" Icon="@Icons.Material.Filled.Security">
+        <div class="d-flex justify-space-between align-center mb-4">
+            <div>
+                <MudText Typo="Typo.h6">Role-Based Access Control (RBAC)</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Select a role to configure which actions and pages they are authorized to access</MudText>
+            </div>
+            <div class="d-flex gap-2 align-center">
+                <MudSelect T="string" Value="_selectedRoleId" ValueChanged="OnRoleSelectionChanged" Label="Select Role to Edit" Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width: 200px;">
+                    @foreach (var r in _roles)
+                    {
+                        <MudSelectItem Value="@r.Id">@r.Name</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveRolePermissions" Disabled="_savingRole || string.IsNullOrEmpty(_selectedRoleId)">
+                    Save Permissions
+                </MudButton>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(_selectedRoleId))
+        {
+            var selectedRole = _roles.FirstOrDefault(r => r.Id == _selectedRoleId);
+            <div class="mb-4">
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    Editing permissions for: <strong>@(selectedRole?.Name)</strong> (@(selectedRole?.Description ?? "Custom Role"))
+                </MudAlert>
+            </div>
+
+            <!-- Permission Checkbox Grid categorized -->
+            <MudGrid>
+                @foreach (var group in GroupedPermissions)
+                {
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudCard Outlined="true" Class="pa-4 h-100">
+                            <MudText Typo="Typo.subtitle2" Class="fw-bold mb-2" Style="color: #1E40AF;">
+                                @group.Key Area
+                            </MudText>
+                            @foreach (var perm in group.Value)
+                            {
+                                var isChecked = _activePermissions.Contains(perm);
+                                <MudCheckBox T="bool" Value="@isChecked" ValueChanged="@((bool val) => TogglePermission(perm, val))"
+                                             Color="Color.Primary" Dense="true" Class="my-1">
+                                    <span style="font-size: 0.85rem;">@perm</span>
+                                </MudCheckBox>
+                            }
+                        </MudCard>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+    </MudTabPanel>
+</MudTabs>
+
+<!-- Create User Dialog -->
+<MudDialog @bind-Visible="_showUserDialog" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Create System User</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_newUser.FullName" Label="Full Name *" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_newUser.UserName" Label="Username *" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_newUser.Email" Label="Email *" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_newUser.PhoneNumber" Label="Phone" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_newUser.Password" Label="Initial Password *" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" InputType="InputType.Password" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="string" @bind-Value="_newUser.RoleName" Label="Assigned Role *" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var r in _roles)
+                    {
+                        <MudSelectItem Value="@r.Name">@r.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _showUserDialog = false)">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveUser" Disabled="_savingUser">
+            Create User
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private List<UserDto> _users = new();
+    private List<RoleDto> _roles = new();
+    private IReadOnlyList<string> _allPermissions = new List<string>();
+
+    private string? _selectedRoleId;
+    private List<string> _activePermissions = new();
+    private bool _savingRole = false;
+
+    private bool _showUserDialog = false;
+    private bool _savingUser = false;
+    private CreateUserRequest _newUser = new();
+    private DialogOptions _dialogOptions = new() { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    private Dictionary<string, List<string>> GroupedPermissions
+    {
+        get
+        {
+            var dict = new Dictionary<string, List<string>>();
+            foreach (var p in _allPermissions)
+            {
+                var prefix = p.Split('.').FirstOrDefault() ?? "General";
+                if (!dict.ContainsKey(prefix)) dict[prefix] = new List<string>();
+                dict[prefix].Add(p);
+            }
+            return dict;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var pRes = await ApiService.GetAllPermissionsAsync();
+        if (pRes?.Success == true && pRes.Data != null) _allPermissions = pRes.Data;
+
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        var uRes = await ApiService.GetUsersAsync();
+        if (uRes?.Success == true && uRes.Data != null) _users = uRes.Data;
+
+        var rRes = await ApiService.GetRolesAsync();
+        if (rRes?.Success == true && rRes.Data != null)
+        {
+            _roles = rRes.Data;
+            if (string.IsNullOrEmpty(_selectedRoleId))
+            {
+                _selectedRoleId = _roles.FirstOrDefault()?.Id;
+                if (!string.IsNullOrEmpty(_selectedRoleId))
+                {
+                    OnRoleSelectionChanged(_selectedRoleId);
+                }
+            }
+        }
+    }
+
+    private void OnRoleSelectionChanged(string roleId)
+    {
+        _selectedRoleId = roleId;
+        var role = _roles.FirstOrDefault(r => r.Id == roleId);
+        _activePermissions = role != null ? new List<string>(role.Permissions) : new List<string>();
+    }
+
+    private void TogglePermission(string perm, bool isChecked)
+    {
+        if (isChecked && !_activePermissions.Contains(perm))
+        {
+            _activePermissions.Add(perm);
+        }
+        else if (!isChecked)
+        {
+            _activePermissions.Remove(perm);
+        }
+    }
+
+    private async Task SaveRolePermissions()
+    {
+        if (string.IsNullOrEmpty(_selectedRoleId)) return;
+
+        var role = _roles.FirstOrDefault(r => r.Id == _selectedRoleId);
+        if (role == null) return;
+
+        _savingRole = true;
+        try
+        {
+            var req = new CreateOrUpdateRoleRequest
+            {
+                Name = role.Name,
+                Description = role.Description,
+                Permissions = _activePermissions
+            };
+
+            var res = await ApiService.UpdateRoleAsync(_selectedRoleId, req);
+            if (res?.Success == true)
+            {
+                Snackbar.Add("Role permissions updated successfully!", Severity.Success);
+                await LoadData();
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to save permissions.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _savingRole = false;
+        }
+    }
+
+    private void OpenCreateUserDialog()
+    {
+        _newUser = new CreateUserRequest
+        {
+            RoleName = _roles.FirstOrDefault(r => r.Name == "SubAdmin")?.Name ?? _roles.FirstOrDefault()?.Name ?? "SubAdmin"
+        };
+        _showUserDialog = true;
+    }
+
+    private async Task SaveUser()
+    {
+        if (string.IsNullOrWhiteSpace(_newUser.UserName) || string.IsNullOrWhiteSpace(_newUser.Email) ||
+            string.IsNullOrWhiteSpace(_newUser.Password) || string.IsNullOrWhiteSpace(_newUser.FullName))
+        {
+            Snackbar.Add("Please fill in all required user fields.", Severity.Warning);
+            return;
+        }
+
+        _savingUser = true;
+        try
+        {
+            var res = await ApiService.CreateUserAsync(_newUser);
+            if (res?.Success == true)
+            {
+                Snackbar.Add("User account created successfully!", Severity.Success);
+                _showUserDialog = false;
+                await LoadData();
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to create user.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _savingUser = false;
+        }
+    }
+}

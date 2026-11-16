@@ -1,0 +1,260 @@
+@page "/marks/bulk-entry"
+@attribute [Authorize]
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>Bulk Marks Entry - Tuition Center</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <div>
+        <MudText Typo="Typo.h5" Class="fw-bold">Bulk Marks Entry Grid</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Enter test or school exam marks for all students in spreadsheet format</MudText>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SaveMarks" Disabled="_saving || !_grid.Rows.Any()">
+        @if (_saving)
+        {
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            <span>Saving Marks...</span>
+        }
+        else
+        {
+            <span>Save All Marks</span>
+        }
+    </MudButton>
+</div>
+
+<!-- Selection Bar -->
+<MudCard Elevation="1" Class="pa-4 mb-4 rounded-lg">
+    <MudGrid Class="align-center">
+        <MudItem xs="12" sm="5">
+            <MudSelect T="int" Value="_selectedAssessmentId" ValueChanged="OnAssessmentChanged" Label="Select Assessment" Variant="Variant.Outlined" Margin="Margin.Dense">
+                @foreach (var a in _assessments)
+                {
+                    <MudSelectItem Value="@a.Id">@a.Name (@a.GradeName - @a.BoardName) - @a.Date.ToString("dd MMM")</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect T="int" Value="_selectedAssessmentSubjectId" ValueChanged="OnSubjectChanged" Label="Select Subject" Variant="Variant.Outlined" Margin="Margin.Dense" Disabled="!_availableSubjects.Any()">
+                @foreach (var sub in _availableSubjects)
+                {
+                    <MudSelectItem Value="@sub.Id">@sub.SubjectName (Max Marks: @sub.MaxMarks)</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="3">
+            <MudSelect T="int?" Value="_selectedBatchId" ValueChanged="OnBatchChanged" Label="Filter Batch (Optional)" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                @foreach (var b in _batches)
+                {
+                    <MudSelectItem T="int?" Value="@b.Id">@b.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+    </MudGrid>
+</MudCard>
+
+@if (_selectedAssessmentSubjectId > 0 && _grid.Rows.Any())
+{
+    var enteredRows = _grid.Rows.Where(r => r.MarksObtained.HasValue && !r.IsAbsent).ToList();
+    var avg = enteredRows.Any() ? Math.Round(enteredRows.Average(r => r.MarksObtained!.Value), 1) : 0;
+    var max = enteredRows.Any() ? enteredRows.Max(r => r.MarksObtained!.Value) : 0;
+    var min = enteredRows.Any() ? enteredRows.Min(r => r.MarksObtained!.Value) : 0;
+    var absentCount = _grid.Rows.Count(r => r.IsAbsent);
+
+    <div class="d-flex gap-3 mb-4 flex-wrap">
+        <MudChip T="string" Color="Color.Primary" Variant="Variant.Filled">Subject: @_grid.SubjectName (Max: @_grid.MaxMarks)</MudChip>
+        <MudChip T="string" Color="Color.Default" Variant="Variant.Filled">Total Students: @_grid.Rows.Count</MudChip>
+        <MudChip T="string" Color="Color.Info" Variant="Variant.Filled">Average: @avg / @_grid.MaxMarks</MudChip>
+        <MudChip T="string" Color="Color.Success" Variant="Variant.Filled">Highest: @max</MudChip>
+        <MudChip T="string" Color="Color.Warning" Variant="Variant.Filled">Lowest: @min</MudChip>
+        @if (absentCount > 0)
+        {
+            <MudChip T="string" Color="Color.Error" Variant="Variant.Filled">Absent: @absentCount</MudChip>
+        }
+    </div>
+}
+
+<!-- Marks Spreadsheet Grid -->
+<MudCard Elevation="2" Class="rounded-lg overflow-hidden">
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+
+    <MudTable Items="@_grid.Rows" Dense="true" Hover="true" Striped="true" Elevation="0">
+        <HeaderContent>
+            <MudTh Style="width: 80px;">#</MudTh>
+            <MudTh>Student Name</MudTh>
+            <MudTh Style="width: 220px;">Marks Obtained (Max: @_grid.MaxMarks)</MudTh>
+            <MudTh Style="width: 140px; text-align: center;">Absent</MudTh>
+            <MudTh>Remarks / Teacher Notes</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.StudentId</MudTd>
+            <MudTd>
+                <MudText Typo="Typo.subtitle2" Class="fw-bold">@context.StudentName</MudText>
+            </MudTd>
+            <MudTd>
+                <MudNumericField T="decimal?" @bind-Value="context.MarksObtained"
+                                 Min="0" Max="@_grid.MaxMarks"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 Disabled="@context.IsAbsent"
+                                 Placeholder="@(context.IsAbsent ? "Absent" : $"0 - {_grid.MaxMarks}")" />
+            </MudTd>
+            <MudTd Style="text-align: center;">
+                <MudCheckBox T="bool" Value="context.IsAbsent" Color="Color.Error"
+                             ValueChanged="@((bool val) => { context.IsAbsent = val; if (val) context.MarksObtained = null; })" />
+            </MudTd>
+            <MudTd>
+                <MudTextField @bind-Value="context.Remarks" Placeholder="e.g. Good progress, Needs focus in algebra"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <div class="pa-8 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.FormatListNumberedRtl" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+                <MudText Typo="Typo.h6">Select an assessment and subject</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Select an assessment and tested subject above to load student mark sheets.</MudText>
+            </div>
+        </NoRecordsContent>
+    </MudTable>
+</MudCard>
+
+@code {
+    [SupplyParameterFromQuery]
+    public int? assessmentSubjectId { get; set; }
+
+    private List<AssessmentDto> _assessments = new();
+    private List<AssessmentSubjectDto> _availableSubjects = new();
+    private List<BatchDto> _batches = new();
+
+    private int _selectedAssessmentId;
+    private int _selectedAssessmentSubjectId;
+    private int? _selectedBatchId;
+    private BulkMarksGridDto _grid = new();
+    private bool _loading = false;
+    private bool _saving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var aRes = await ApiService.GetAssessmentsAsync();
+        if (aRes?.Success == true && aRes.Data != null)
+        {
+            _assessments = aRes.Data;
+        }
+
+        var bRes = await ApiService.GetBatchesAsync();
+        if (bRes?.Success == true && bRes.Data != null)
+        {
+            _batches = bRes.Data;
+        }
+
+        if (assessmentSubjectId.HasValue && assessmentSubjectId > 0)
+        {
+            _selectedAssessmentSubjectId = assessmentSubjectId.Value;
+            var parentAssessment = _assessments.FirstOrDefault(a => a.Subjects.Any(s => s.Id == _selectedAssessmentSubjectId));
+            if (parentAssessment != null)
+            {
+                _selectedAssessmentId = parentAssessment.Id;
+                _availableSubjects = parentAssessment.Subjects;
+            }
+            await LoadGrid();
+        }
+        else if (_assessments.Any())
+        {
+            var first = _assessments.First();
+            _selectedAssessmentId = first.Id;
+            _availableSubjects = first.Subjects;
+            if (_availableSubjects.Any())
+            {
+                _selectedAssessmentSubjectId = _availableSubjects.First().Id;
+                await LoadGrid();
+            }
+        }
+    }
+
+    private async Task OnAssessmentChanged(int assessmentId)
+    {
+        _selectedAssessmentId = assessmentId;
+        var a = _assessments.FirstOrDefault(x => x.Id == assessmentId);
+        _availableSubjects = a?.Subjects ?? new();
+        _selectedAssessmentSubjectId = _availableSubjects.FirstOrDefault()?.Id ?? 0;
+        await LoadGrid();
+    }
+
+    private async Task OnSubjectChanged(int asubId)
+    {
+        _selectedAssessmentSubjectId = asubId;
+        await LoadGrid();
+    }
+
+    private async Task OnBatchChanged(int? batchId)
+    {
+        _selectedBatchId = batchId;
+        await LoadGrid();
+    }
+
+    private async Task LoadGrid()
+    {
+        if (_selectedAssessmentSubjectId <= 0) return;
+
+        _loading = true;
+        try
+        {
+            var res = await ApiService.GetMarksGridAsync(_selectedAssessmentSubjectId, _selectedBatchId);
+            if (res?.Success == true && res.Data != null)
+            {
+                _grid = res.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading marks grid: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task SaveMarks()
+    {
+        if (!_grid.Rows.Any() || _selectedAssessmentSubjectId <= 0) return;
+
+        _saving = true;
+        try
+        {
+            var req = new BulkSaveMarksRequest
+            {
+                AssessmentSubjectId = _selectedAssessmentSubjectId,
+                Marks = _grid.Rows.Select(r => new StudentMarkSaveItem
+                {
+                    StudentId = r.StudentId,
+                    MarksObtained = r.MarksObtained,
+                    IsAbsent = r.IsAbsent,
+                    Remarks = r.Remarks
+                }).ToList()
+            };
+
+            var res = await ApiService.SaveBulkMarksAsync(req);
+            if (res?.Success == true)
+            {
+                Snackbar.Add("Marks saved successfully!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to save marks.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving marks: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

@@ -1,0 +1,271 @@
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center justify-space-between w-100">
+            <div class="d-flex align-center">
+                <MudIcon Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Primary" Class="mr-2" />
+                <MudText Typo="Typo.h6">Payment Receipt</MudText>
+            </div>
+            @if (_receipt != null)
+            {
+                <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">
+                    @_receipt.ReceiptNumber
+                </MudChip>
+            }
+        </div>
+    </TitleContent>
+    <DialogContent>
+        @if (_loading)
+        {
+            <div class="d-flex justify-center my-8">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            </div>
+        }
+        else if (_receipt == null)
+        {
+            <MudAlert Severity="Severity.Error">Could not load receipt details.</MudAlert>
+        }
+        else
+        {
+            <div id="receipt-print-area" class="pa-4 receipt-container" style="background: white; color: #1e293b; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <!-- Header -->
+                <div class="text-center pb-3 border-bottom" style="border-bottom: 2px dashed #cbd5e1;">
+                    <MudText Typo="Typo.h5" Style="font-weight: 800; color: #1e3a8a; letter-spacing: 0.5px;">
+                        @_receipt.CenterName
+                    </MudText>
+                    @if (!string.IsNullOrEmpty(_receipt.CenterTagline))
+                    {
+                        <MudText Typo="Typo.caption" Style="color: #64748b; font-weight: 500;">
+                            @_receipt.CenterTagline
+                        </MudText>
+                    }
+                    <div class="d-flex justify-center flex-wrap gap-3 mt-1" style="font-size: 0.8rem; color: #475569;">
+                        @if (!string.IsNullOrEmpty(_receipt.CenterAddress))
+                        {
+                            <span><MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Class="mr-1" Style="font-size: 13px; vertical-align: text-bottom;" />@_receipt.CenterAddress</span>
+                        }
+                        @if (!string.IsNullOrEmpty(_receipt.CenterPhone))
+                        {
+                            <span><MudIcon Icon="@Icons.Material.Filled.Phone" Size="Size.Small" Class="mr-1" Style="font-size: 13px; vertical-align: text-bottom;" />@_receipt.CenterPhone</span>
+                        }
+                    </div>
+                    <div class="mt-2">
+                        <span style="background-color: #1e3a8a; color: white; padding: 2px 14px; font-weight: 700; font-size: 0.8rem; border-radius: 12px; letter-spacing: 1px; text-transform: uppercase;">
+                            Official Fee Receipt
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Meta Details -->
+                <div class="d-flex justify-space-between align-center mt-3 pb-2 border-bottom" style="border-bottom: 1px solid #e2e8f0; font-size: 0.85rem;">
+                    <div>
+                        <span style="color: #64748b;">Receipt No:</span>
+                        <strong style="color: #0f172a; margin-left: 4px;">@_receipt.ReceiptNumber</strong>
+                    </div>
+                    <div>
+                        <span style="color: #64748b;">Date:</span>
+                        <strong style="color: #0f172a; margin-left: 4px;">@_receipt.PaymentDate.ToString("dd MMM yyyy, hh:mm tt")</strong>
+                    </div>
+                </div>
+
+                <!-- Student & Parent Grid -->
+                <div class="my-3 pa-3" style="background-color: #f8fafc; border-radius: 6px; border: 1px solid #f1f5f9; font-size: 0.85rem;">
+                    <MudGrid Spacing="1">
+                        <MudItem xs="6">
+                            <span style="color: #64748b;">Student Name:</span>
+                            <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">@_receipt.StudentName</div>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <span style="color: #64748b;">Grade & Board:</span>
+                            <div style="font-weight: 600; color: #0f172a;">@_receipt.GradeName (@_receipt.BoardName)</div>
+                        </MudItem>
+                        <MudItem xs="6" Class="mt-1">
+                            <span style="color: #64748b;">Parent / Guardian:</span>
+                            <div style="font-weight: 600; color: #334155;">@_receipt.ParentName</div>
+                        </MudItem>
+                        <MudItem xs="6" Class="mt-1">
+                            <span style="color: #64748b;">Contact:</span>
+                            <div style="font-weight: 600; color: #334155;">@_receipt.ParentPhone</div>
+                        </MudItem>
+                    </MudGrid>
+                </div>
+
+                <!-- Payment Breakup Table -->
+                <div class="mt-3">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                        <thead>
+                            <tr style="background-color: #f1f5f9; border-top: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1;">
+                                <th style="text-align: left; padding: 6px 8px;">Description</th>
+                                <th style="text-align: left; padding: 6px 8px;">Payment Mode</th>
+                                <th style="text-align: right; padding: 6px 8px;">Amount Paid</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="border-bottom: 1px solid #e2e8f0;">
+                                <td style="padding: 10px 8px;">
+                                    <strong>Tuition & Coaching Fee</strong>
+                                    @if (!string.IsNullOrEmpty(_receipt.Remarks))
+                                    {
+                                        <div style="font-size: 0.75rem; color: #64748b;">@_receipt.Remarks</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(_receipt.TransactionRef))
+                                    {
+                                        <div style="font-size: 0.75rem; color: #64748b;">Ref / Trx: @_receipt.TransactionRef</div>
+                                    }
+                                </td>
+                                <td style="padding: 10px 8px;">
+                                    <span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 0.75rem;">
+                                        @_receipt.PaymentMode
+                                    </span>
+                                </td>
+                                <td style="padding: 10px 8px; text-align: right; font-weight: 700; font-size: 1.1rem; color: #166534;">
+                                    ₹@_receipt.AmountPaid.ToString("N2")
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Balance Summary Box -->
+                <div class="mt-4 pa-3" style="border: 1px solid #e2e8f0; border-radius: 6px; background-color: #fafaf9; font-size: 0.85rem;">
+                    <div class="d-flex justify-space-between py-1">
+                        <span style="color: #64748b;">Total Fee Assigned:</span>
+                        <strong style="color: #334155;">₹@_receipt.TotalFee.ToString("N2")</strong>
+                    </div>
+                    <div class="d-flex justify-space-between py-1">
+                        <span style="color: #64748b;">Total Paid to Date:</span>
+                        <strong style="color: #166534;">₹@_receipt.TotalPaidSoFar.ToString("N2")</strong>
+                    </div>
+                    <div class="d-flex justify-space-between py-1 border-top" style="border-top: 1px dashed #cbd5e1; font-weight: 700;">
+                        <span style="color: #0f172a;">Remaining Balance:</span>
+                        <span style="@($"color: {(_receipt.RemainingBalance > 0 ? "#b91c1c" : "#166534")}; font-size: 0.95rem;")">
+                            ₹@_receipt.RemainingBalance.ToString("N2")
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Footer Signatures -->
+                <div class="d-flex justify-space-between align-end mt-6 pt-4" style="font-size: 0.8rem; color: #64748b;">
+                    <div>
+                        <div>Issued By: <strong style="color: #334155;">@_receipt.ReceivedByName</strong></div>
+                        <div style="font-size: 0.75rem;">Computer Generated Document</div>
+                    </div>
+                    <div class="text-center">
+                        <div style="width: 140px; border-top: 1px solid #94a3b8; padding-top: 4px;">
+                            Authorized Signatory
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Close</MudButton>
+        @if (_receipt != null)
+        {
+            <MudButton Color="Color.Success" Variant="Variant.Outlined" StartIcon="@Icons.Custom.Brands.WhatsApp" OnClick="SendWhatsAppReceipt">
+                WhatsApp to Parent
+            </MudButton>
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Print" OnClick="PrintReceipt">
+                Print Receipt
+            </MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public int PaymentId { get; set; }
+
+    [Parameter]
+    public PaymentReceiptDto? ReceiptData { get; set; }
+
+    private PaymentReceiptDto? _receipt;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (ReceiptData != null)
+        {
+            _receipt = ReceiptData;
+            _loading = false;
+        }
+        else if (PaymentId > 0)
+        {
+            await LoadReceiptAsync();
+        }
+        else
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task LoadReceiptAsync()
+    {
+        _loading = true;
+        try
+        {
+            var res = await ApiService.GetPaymentReceiptAsync(PaymentId);
+            if (res?.Success == true)
+            {
+                _receipt = res.Data;
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to load receipt", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task PrintReceipt()
+    {
+        await JS.InvokeVoidAsync("window.print");
+    }
+
+    private async Task SendWhatsAppReceipt()
+    {
+        if (_receipt == null || string.IsNullOrEmpty(_receipt.ParentPhone))
+        {
+            Snackbar.Add("No parent phone number found", Severity.Warning);
+            return;
+        }
+
+        var phone = _receipt.ParentPhone.Replace(" ", "").Replace("-", "").Replace("+", "");
+        if (phone.Length == 10) phone = "91" + phone;
+
+        var message = $"Dear {_receipt.ParentName},\n\nWe have received fee payment of ₹{_receipt.AmountPaid:N0} for {_receipt.StudentName} ({_receipt.GradeName}).\nReceipt Number: {_receipt.ReceiptNumber}\nPayment Mode: {_receipt.PaymentMode}\nRemaining Balance: ₹{_receipt.RemainingBalance:N0}\n\nThank you!\n{_receipt.CenterName}";
+
+        var encoded = Uri.EscapeDataString(message);
+        var url = $"https://wa.me/{phone}?text={encoded}";
+
+        await JS.InvokeVoidAsync("open", url, "_blank");
+
+        // Log the dispatch
+        await ApiService.LogWhatsAppDispatchAsync(new LogWhatsAppDispatchDto
+        {
+            StudentId = _receipt.StudentId,
+            RecipientName = _receipt.ParentName,
+            RecipientPhone = _receipt.ParentPhone,
+            MessageCategory = "PaymentConfirmation",
+            MessageBody = message
+        });
+
+        Snackbar.Add("WhatsApp window opened & receipt dispatch logged", Severity.Success);
+    }
+
+    private void Close() => MudDialog.Close(DialogResult.Ok(true));
+}
