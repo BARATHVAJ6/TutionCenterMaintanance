@@ -24,5 +24,6 @@ bld/
 *.db-shm
 *.db-wal
 
-## Graphify cache
-graphify-out/cache/
+## Graphify
+graphify-out/
+/TutionCenterMaintanance/TuitionCenter.db
