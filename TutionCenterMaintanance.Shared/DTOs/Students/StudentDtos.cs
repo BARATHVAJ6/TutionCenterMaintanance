@@ -5,12 +5,8 @@ namespace TutionCenterMaintanance.Shared.DTOs.Students;
 
 public class ParentInfoDto
 {
-    [Required]
-    public string FatherName { get; set; } = string.Empty;
-
-    [Required]
-    public string FatherPhone { get; set; } = string.Empty;
-
+    public string? FatherName { get; set; } = string.Empty;
+    public string? FatherPhone { get; set; } = string.Empty;
     public string? FatherWhatsApp { get; set; }
     public string? MotherName { get; set; }
     public string? MotherPhone { get; set; }
@@ -38,6 +34,7 @@ public class StudentDto
     public string? BloodGroup { get; set; }
     public string? MedicalNotes { get; set; }
     public string? PreviousRecords { get; set; }
+    public decimal MonthlyFeeAmount { get; set; }
     public bool IsActive { get; set; }
     public ParentInfoDto Parent { get; set; } = new();
     public List<int> BatchIds { get; set; } = new();
@@ -56,6 +53,7 @@ public class StudentListItemDto
     public string? WhatsAppPhone { get; set; }
     public bool IsActive { get; set; }
     public string? PhotoUrl { get; set; }
+    public decimal MonthlyFeeAmount { get; set; }
     public List<string> BatchNames { get; set; } = new();
 }
 
@@ -86,6 +84,7 @@ public class CreateStudentRequest
     public string? BloodGroup { get; set; }
     public string? MedicalNotes { get; set; }
     public string? PreviousRecords { get; set; }
+    public decimal MonthlyFeeAmount { get; set; } = 0;
     public string? PhotoBase64 { get; set; }
 
     [Required]

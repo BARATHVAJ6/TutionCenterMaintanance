@@ -1,5 +1,5 @@
 <Solution>
+  <Project Path="TutionCenterMaintanance/TutionCenterMaintanance.csproj" />
   <Project Path="TutionCenterMaintanance.Client/TutionCenterMaintanance.Client.csproj" />
   <Project Path="TutionCenterMaintanance.Shared/TutionCenterMaintanance.Shared.csproj" />
-  <Project Path="TutionCenterMaintanance/TutionCenterMaintanance.csproj" />
 </Solution>

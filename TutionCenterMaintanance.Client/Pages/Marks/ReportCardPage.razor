@@ -23,7 +23,7 @@
             {
                 summaryText += $"• {exam.AssessmentName}: {exam.TotalObtained}/{exam.TotalMaximum} ({exam.Percentage}%)\n";
             }
-            summaryText += "Bright Minds Tuition Center";
+            summaryText += "Sai Tuition Center";
 
             <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Custom.Brands.WhatsApp"
                        Href="@($"https://wa.me/{cleanPhone}?text={Uri.EscapeDataString(summaryText)}")" Target="_blank">
@@ -62,7 +62,7 @@ else if (_reportCard != null)
     <MudPaper Elevation="4" Class="pa-8 rounded-lg mx-auto" Style="max-width: 900px; background-color: white; color: #1e293b;">
         <!-- Header -->
         <div class="text-center pb-4 mb-4 border-b-2" style="border-bottom: 2px solid #1E40AF;">
-            <MudText Typo="Typo.h4" Class="fw-bold" Style="color: #1E40AF;">@(_settings?.CenterName ?? "Bright Minds Tuition Center")</MudText>
+            <MudText Typo="Typo.h4" Class="fw-bold" Style="color: #1E40AF;">@(_settings?.CenterName ?? "Sai Tuition Center")</MudText>
             <MudText Typo="Typo.subtitle1" Color="Color.Secondary">@(_settings?.Tagline ?? "Excellence in Learning from UKG to Grade 12")</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary">@_settings?.Address • Phone: @_settings?.Phone</MudText>
             <div class="mt-2">

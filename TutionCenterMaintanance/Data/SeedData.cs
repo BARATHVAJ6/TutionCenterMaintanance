@@ -113,12 +113,56 @@ public static class SeedData
             await context.SaveChangesAsync();
         }
 
-        // 5. Seed Boards if empty
-        if (!await context.Boards.AnyAsync())
+        // 4b. Ensure LKG Grade exists and migrate Grade names to numeric Standard format (e.g. 1st Std, 2nd Std)
+        var gradeRenameMap = new Dictionary<string, string>
+        {
+            { "Grade 1", "1st Std" }, { "First Standard", "1st Std" },
+            { "Grade 2", "2nd Std" }, { "Second Standard", "2nd Std" },
+            { "Grade 3", "3rd Std" }, { "Third Standard", "3rd Std" },
+            { "Grade 4", "4th Std" }, { "Fourth Standard", "4th Std" },
+            { "Grade 5", "5th Std" }, { "Fifth Standard", "5th Std" },
+            { "Grade 6", "6th Std" }, { "Sixth Standard", "6th Std" },
+            { "Grade 7", "7th Std" }, { "Seventh Standard", "7th Std" },
+            { "Grade 8", "8th Std" }, { "Eighth Standard", "8th Std" },
+            { "Grade 9", "9th Std" }, { "Ninth Standard", "9th Std" },
+            { "Grade 10", "10th Std" }, { "Tenth Standard", "10th Std" },
+            { "Grade 11", "11th Std" }, { "11th Standard", "11th Std" },
+            { "Grade 12", "12th Std" }, { "12th Standard", "12th Std" }
+        };
+        foreach (var pair in gradeRenameMap)
+        {
+            var existingGrade = await context.Grades.FirstOrDefaultAsync(g => g.Name == pair.Key);
+            if (existingGrade != null)
+            {
+                existingGrade.Name = pair.Value;
+            }
+        }
+
+        var lkgGrade = await context.Grades.FirstOrDefaultAsync(g => g.Name == "LKG");
+        if (lkgGrade == null)
+        {
+            context.Grades.Add(new Grade
+            {
+                Name = "LKG",
+                OrderIndex = -1,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+        await context.SaveChangesAsync();
+
+        // 5. Remove ICSE Board and seed active boards if empty
+        var icseBoard = await context.Boards.FirstOrDefaultAsync(b => b.Name == "ICSE" || b.Code == "ICSE");
+        if (icseBoard != null)
+        {
+            icseBoard.IsDeleted = true;
+            icseBoard.IsActive = false;
+            await context.SaveChangesAsync();
+        }
+
+        if (!await context.Boards.AnyAsync(b => !b.IsDeleted))
         {
             context.Boards.AddRange(
                 new Board { Name = "CBSE", Code = "CBSE", IsActive = true },
-                new Board { Name = "ICSE", Code = "ICSE", IsActive = true },
                 new Board { Name = "State Board", Code = "STATE", IsActive = true }
             );
             await context.SaveChangesAsync();
@@ -156,13 +200,14 @@ public static class SeedData
             await context.SaveChangesAsync();
         }
 
-        // 8. Seed Discounts if empty
-        if (!await context.Discounts.AnyAsync())
+        // 8. Seed Starter Stationery Items if empty
+        if (!await context.StationeryItems.AnyAsync())
         {
-            context.Discounts.AddRange(
-                new Discount { Name = "Merit Scholarship", Type = DiscountType.Scholarship, Value = 25, IsPercentage = true },
-                new Discount { Name = "Sibling Discount", Type = DiscountType.SiblingDiscount, Value = 15, IsPercentage = true },
-                new Discount { Name = "Early Bird Discount", Type = DiscountType.EarlyBird, Value = 10, IsPercentage = true }
+            context.StationeryItems.AddRange(
+                new StationeryItem { Name = "A4 Long Notebook (192 pgs)", Unit = "Each", DefaultSellingPrice = 40, IsActive = true, CreatedAt = DateTime.UtcNow },
+                new StationeryItem { Name = "Blue Ballpoint Pen (5-Pack)", Unit = "Pack", DefaultSellingPrice = 30, IsActive = true, CreatedAt = DateTime.UtcNow },
+                new StationeryItem { Name = "Geometry Box", Unit = "Box", DefaultSellingPrice = 90, IsActive = true, CreatedAt = DateTime.UtcNow },
+                new StationeryItem { Name = "Graph & Chart Papers", Unit = "Sheet", DefaultSellingPrice = 5, IsActive = true, CreatedAt = DateTime.UtcNow }
             );
             await context.SaveChangesAsync();
         }
@@ -226,17 +271,23 @@ public static class SeedData
             await context.SaveChangesAsync();
         }
 
-        // 11. Seed Center Settings if empty
-        if (!await context.CenterSettings.AnyAsync())
+        // 11. Seed Center Settings if empty or update existing default name
+        var existingSettings = await context.CenterSettings.FirstOrDefaultAsync();
+        if (existingSettings == null)
         {
             context.CenterSettings.Add(new CenterSettings
             {
-                CenterName = "Bright Minds Tuition Center",
+                CenterName = "Sai Tuition Center",
                 Tagline = "Excellence in Learning from UKG to Grade 12",
                 Address = "123 Academic Avenue, Knowledge City",
                 Phone = "+91 98765 43210",
-                Email = "support@brightminds.edu"
+                Email = "support@saituition.edu"
             });
+            await context.SaveChangesAsync();
+        }
+        else if (existingSettings.CenterName == "Bright Minds Tuition Center" || existingSettings.CenterName == "Bright Minds Tuition")
+        {
+            existingSettings.CenterName = "Sai Tuition Center";
             await context.SaveChangesAsync();
         }
     }

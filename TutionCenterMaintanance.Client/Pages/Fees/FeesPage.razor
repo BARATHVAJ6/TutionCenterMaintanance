@@ -6,665 +6,552 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 
-<PageTitle>Fees & Financials - Tuition Center</PageTitle>
+<PageTitle>Fee Collection - Sai Tuition Center</PageTitle>
 
-<div class="d-flex justify-space-between align-center mb-4">
+<!-- Header & Period Switcher -->
+<div class="d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center mb-5 gap-3">
     <div>
-        <MudText Typo="Typo.h5" Class="fw-bold">Fee Collection & Financials</MudText>
-        <MudText Typo="Typo.body2" Color="Color.Secondary">Monitor fee balances, aging defaulters, automated receipts, and revenue trends</MudText>
+        <h1 style="font-size: 1.45rem; font-weight: 700; color: var(--color-ink); margin: 0; letter-spacing: -0.02em;">
+            Tuition Fee Collection
+        </h1>
+        <p style="font-size: 0.85rem; color: var(--color-ink-secondary); margin: 3px 0 0 0;">
+            Track monthly cash tuition fees for each student • 30–40 students strength
+        </p>
     </div>
-    <div class="d-flex gap-2">
-        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.LocalOffer" OnClick="@(() => Navigation.NavigateTo("/fees/plans"))">
-            Fee Plans & Pricing
+    <div class="d-flex align-center gap-2">
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.AccountBalance"
+                   OnClick="@(() => Navigation.NavigateTo("/financials"))"
+                   Style="border-radius: 10px; font-weight: 600; text-transform: none;">
+            Financials & Expenses
         </MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="RefreshAll">
-            Refresh All
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Secondary"
+                   StartIcon="@Icons.Material.Filled.Refresh"
+                   OnClick="LoadData"
+                   Disabled="_loading"
+                   Style="border-radius: 10px; font-weight: 600; text-transform: none;">
+            Refresh
         </MudButton>
     </div>
 </div>
 
-<!-- Fee Metrics Summary Cards -->
-@if (_summaries.Any())
-{
-    var totalFeeSum = _summaries.Sum(s => s.TotalFee);
-    var totalPaidSum = _summaries.Sum(s => s.PaidAmount);
-    var totalDueSum = _summaries.Sum(s => s.DueAmount);
-    var overdueCount = _summaries.Count(s => s.Status == PaymentStatus.Overdue);
-
-    <MudGrid Class="mb-4">
-        <MudItem xs="12" sm="6" md="3">
-            <MudCard Elevation="2" Class="pa-4 rounded-xl border-l-4 border-l-primary">
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="fw-bold">TOTAL ASSIGNED FEES</MudText>
-                <MudText Typo="Typo.h5" Class="fw-bold mt-1">₹@totalFeeSum.ToString("N0")</MudText>
-            </MudCard>
-        </MudItem>
-        <MudItem xs="12" sm="6" md="3">
-            <MudCard Elevation="2" Class="pa-4 rounded-xl border-l-4 border-l-success">
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="fw-bold">TOTAL COLLECTED</MudText>
-                <MudText Typo="Typo.h5" Class="fw-bold mt-1" Style="color: #10B981;">₹@totalPaidSum.ToString("N0")</MudText>
-            </MudCard>
-        </MudItem>
-        <MudItem xs="12" sm="6" md="3">
-            <MudCard Elevation="2" Class="pa-4 rounded-xl border-l-4 border-l-warning">
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="fw-bold">PENDING BALANCE</MudText>
-                <MudText Typo="Typo.h5" Class="fw-bold mt-1" Style="color: #F59E0B;">₹@totalDueSum.ToString("N0")</MudText>
-            </MudCard>
-        </MudItem>
-        <MudItem xs="12" sm="6" md="3">
-            <MudCard Elevation="2" Class="pa-4 rounded-xl border-l-4 border-l-error">
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="fw-bold">OVERDUE STUDENTS</MudText>
-                <MudText Typo="Typo.h5" Class="fw-bold mt-1" Style="color: #EF4444;">@overdueCount Students</MudText>
-            </MudCard>
-        </MudItem>
-    </MudGrid>
-}
-
-<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" Color="Color.Primary" TabPanelsClass="pa-4">
-    <!-- Tab 1: Student Fee Overview -->
-    <MudTabPanel Text="Student Balances" Icon="@Icons.Material.Filled.AccountBalanceWallet" BadgeData="@_summaries.Count" BadgeColor="Color.Info">
-        <!-- Filter Bar -->
-        <MudCard Elevation="0" Class="pa-2 mb-4">
-            <MudGrid Class="align-center">
-                <MudItem xs="12" sm="4">
-                    <MudSelect T="int?" Value="_filterGradeId" ValueChanged="OnGradeFilterChanged" Label="Filter Grade" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
-                        @foreach (var g in _grades)
-                        {
-                            <MudSelectItem T="int?" Value="@g.Id">@g.Name</MudSelectItem>
-                        }
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="12" sm="4">
-                    <MudSelect T="PaymentStatus?" Value="_filterStatus" ValueChanged="OnStatusFilterChanged" Label="Payment Status" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
-                        <MudSelectItem T="PaymentStatus?" Value="PaymentStatus.Paid">Paid</MudSelectItem>
-                        <MudSelectItem T="PaymentStatus?" Value="PaymentStatus.PartiallyPaid">Partially Paid</MudSelectItem>
-                        <MudSelectItem T="PaymentStatus?" Value="PaymentStatus.Pending">Pending</MudSelectItem>
-                        <MudSelectItem T="PaymentStatus?" Value="PaymentStatus.Overdue">Overdue</MudSelectItem>
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="12" sm="4" Class="text-right">
-                    <MudButton StartIcon="@Icons.Material.Filled.Refresh" Variant="Variant.Text" Color="Color.Primary" OnClick="LoadFeeSummaries">
-                        Refresh List
-                    </MudButton>
-                </MudItem>
-            </MudGrid>
-        </MudCard>
-
-        @if (_loadingSummaries)
+<!-- Month Navigator & Filter Bar -->
+<div class="pa-3 rounded-xl mb-5 d-flex flex-wrap align-center justify-space-between gap-3"
+     style="background-color: var(--color-surface); border: 1px solid var(--color-rule); box-shadow: var(--shadow-sm);">
+    <!-- Month Navigator -->
+    <div class="d-flex align-center gap-2">
+        <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
+                       Size="Size.Small"
+                       OnClick="PrevMonth"
+                       Title="Previous month" />
+        <div style="font-weight: 700; font-size: 1.05rem; min-width: 140px; text-align: center; color: var(--color-ink);">
+            @_currentMonthDate.ToString("MMMM yyyy")
+        </div>
+        <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
+                       Size="Size.Small"
+                       OnClick="NextMonth"
+                       Title="Next month" />
+        @if (_currentMonthDate.Month != DateTime.Today.Month || _currentMonthDate.Year != DateTime.Today.Year)
         {
-            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            <MudButton Size="Size.Small"
+                       Variant="Variant.Text"
+                       Color="Color.Primary"
+                       OnClick="GoToCurrentMonth"
+                       Style="text-transform: none; font-size: 0.78rem;">
+                Today
+            </MudButton>
         }
+    </div>
 
-        <MudTable Items="@_summaries" Dense="true" Hover="true" Striped="true" Elevation="0">
+    <!-- Filters & Search -->
+    <div class="d-flex align-center gap-2 flex-grow-1 justify-end flex-wrap" style="max-width: 550px;">
+        <MudTextField @bind-Value="_searchQuery"
+                      Placeholder="Search student by name..."
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Clearable="true"
+                      Immediate="true"
+                      Style="max-width: 240px; background-color: var(--color-surface);" />
+
+        <MudSelect T="int"
+                   Value="_selectedGradeId"
+                   ValueChanged="OnGradeFilterChanged"
+                   Label="Standard"
+                   Variant="Variant.Outlined"
+                   Margin="Margin.Dense"
+                   Style="min-width: 150px; background-color: var(--color-surface);">
+            <MudSelectItem Value="0">All Standards</MudSelectItem>
+            @foreach (var g in _grades)
+            {
+                <MudSelectItem Value="@g.Id">@g.Name</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudSelect T="string"
+                   @bind-Value="_selectedStatusFilter"
+                   Label="Status"
+                   Variant="Variant.Outlined"
+                   Margin="Margin.Dense"
+                   Style="min-width: 130px; background-color: var(--color-surface);">
+            <MudSelectItem Value="@("All")">All Status</MudSelectItem>
+            <MudSelectItem Value="@("Paid")">Paid</MudSelectItem>
+            <MudSelectItem Value="@("Partial")">Partial</MudSelectItem>
+            <MudSelectItem Value="@("Unpaid")">Unpaid</MudSelectItem>
+            <MudSelectItem Value="@("NoFee")">No Fee Set</MudSelectItem>
+        </MudSelect>
+    </div>
+</div>
+
+<!-- Fee Metrics Summary Cards (Hallmark styling) -->
+<MudGrid Class="mb-5">
+    <!-- Active Students & Paid Count -->
+    <MudItem xs="12" sm="6" md="3">
+        <div class="pa-4 rounded-xl card-hover-subtle"
+             style="background-color: var(--color-surface); border: 1px solid var(--color-rule); box-shadow: var(--shadow-sm); border-radius: 16px;">
+            <div class="d-flex justify-space-between align-start mb-2">
+                <span style="font-size: 0.82rem; font-weight: 600; color: var(--color-ink-secondary);">Collection Progress</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background-color: var(--color-primary-soft); display: flex; align-items: center; justify-content: center;">
+                    <MudIcon Icon="@Icons.Material.Outlined.People" Style="color: var(--color-primary); font-size: 18px;" />
+                </div>
+            </div>
+            <div style="font-size: 1.6rem; font-weight: 700; color: var(--color-ink); letter-spacing: -0.02em; font-variant-numeric: tabular-nums;">
+                @_paidStudentsCount / @_totalStudentsCount
+            </div>
+            <div class="d-flex align-center gap-1 mt-1">
+                <span class="adorable-badge adorable-badge-primary" style="font-size: 0.7rem; padding: 2px 6px;">
+                    @_collectionRate% paid this month
+                </span>
+            </div>
+        </div>
+    </MudItem>
+
+    <!-- Total Expected Fees -->
+    <MudItem xs="12" sm="6" md="3">
+        <div class="pa-4 rounded-xl card-hover-subtle"
+             style="background-color: var(--color-surface); border: 1px solid var(--color-rule); box-shadow: var(--shadow-sm); border-radius: 16px;">
+            <div class="d-flex justify-space-between align-start mb-2">
+                <span style="font-size: 0.82rem; font-weight: 600; color: var(--color-ink-secondary);">Total Expected Fees</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background-color: var(--color-info-soft); display: flex; align-items: center; justify-content: center;">
+                    <MudIcon Icon="@Icons.Material.Outlined.ReceiptLong" Style="color: var(--color-info); font-size: 18px;" />
+                </div>
+            </div>
+            <div style="font-size: 1.6rem; font-weight: 700; color: var(--color-ink); letter-spacing: -0.02em; font-variant-numeric: tabular-nums;">
+                ₹@_totalExpectedSum.ToString("N0")
+            </div>
+            <span class="adorable-badge adorable-badge-neutral mt-1" style="font-size: 0.7rem; padding: 2px 6px;">
+                Monthly fee total
+            </span>
+        </div>
+    </MudItem>
+
+    <!-- Total Collected -->
+    <MudItem xs="12" sm="6" md="3">
+        <div class="pa-4 rounded-xl card-hover-subtle"
+             style="background-color: var(--color-surface); border: 1px solid var(--color-rule); box-shadow: var(--shadow-sm); border-radius: 16px;">
+            <div class="d-flex justify-space-between align-start mb-2">
+                <span style="font-size: 0.82rem; font-weight: 600; color: var(--color-ink-secondary);">Cash Collected</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background-color: var(--color-success-soft); display: flex; align-items: center; justify-content: center;">
+                    <MudIcon Icon="@Icons.Material.Outlined.CheckCircleOutline" Style="color: var(--color-success); font-size: 18px;" />
+                </div>
+            </div>
+            <div style="font-size: 1.6rem; font-weight: 700; color: var(--color-success); letter-spacing: -0.02em; font-variant-numeric: tabular-nums;">
+                ₹@_totalPaidSum.ToString("N0")
+            </div>
+            <span class="adorable-badge adorable-badge-success mt-1" style="font-size: 0.7rem; padding: 2px 6px;">
+                Received offline
+            </span>
+        </div>
+    </MudItem>
+
+    <!-- Pending Due -->
+    <MudItem xs="12" sm="6" md="3">
+        <div class="pa-4 rounded-xl card-hover-subtle"
+             style="background-color: var(--color-surface); border: 1px solid var(--color-rule); box-shadow: var(--shadow-sm); border-radius: 16px;">
+            <div class="d-flex justify-space-between align-start mb-2">
+                <span style="font-size: 0.82rem; font-weight: 600; color: var(--color-ink-secondary);">Pending Balance</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background-color: var(--color-warning-soft); display: flex; align-items: center; justify-content: center;">
+                    <MudIcon Icon="@Icons.Material.Outlined.HourglassTop" Style="color: var(--color-warning); font-size: 18px;" />
+                </div>
+            </div>
+            <div style="font-size: 1.6rem; font-weight: 700; color: var(--color-warning); letter-spacing: -0.02em; font-variant-numeric: tabular-nums;">
+                ₹@_totalDueSum.ToString("N0")
+            </div>
+            <span class="adorable-badge adorable-badge-warning mt-1" style="font-size: 0.7rem; padding: 2px 6px;">
+                @_unpaidStudentsCount student(s) pending
+            </span>
+        </div>
+    </MudItem>
+</MudGrid>
+
+<!-- Students Fee Table -->
+<div class="rounded-xl overflow-hidden"
+     style="background-color: var(--color-surface); border: 1px solid var(--color-rule); box-shadow: var(--shadow-sm);">
+    @if (_loading)
+    {
+        <div class="pa-8 text-center">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            <div class="mt-2" style="font-size: 0.85rem; color: var(--color-ink-muted);">Loading student fee records...</div>
+        </div>
+    }
+    else if (!FilteredStudents.Any())
+    {
+        <div class="pa-10 text-center">
+            <MudIcon Icon="@Icons.Material.Outlined.SearchOff" Style="font-size: 40px; color: var(--color-ink-muted);" />
+            <div class="mt-2" style="font-weight: 600; color: var(--color-ink);">No student fee records found</div>
+            <div style="font-size: 0.85rem; color: var(--color-ink-secondary);">Try adjusting your search or standard filter</div>
+        </div>
+    }
+    else
+    {
+        <MudTable Items="@FilteredStudents" Dense="true" Hover="true" Elevation="0" Class="modular-table">
             <HeaderContent>
-                <MudTh>Student Name</MudTh>
-                <MudTh>Grade & Board</MudTh>
-                <MudTh>Plan</MudTh>
-                <MudTh Style="text-align: right;">Total Fee</MudTh>
-                <MudTh Style="text-align: right;">Paid</MudTh>
-                <MudTh Style="text-align: right;">Balance Due</MudTh>
-                <MudTh Style="text-align: center;">Status</MudTh>
+                <MudTh>Student</MudTh>
+                <MudTh>Standard</MudTh>
+                <MudTh>Monthly Fee</MudTh>
+                <MudTh>Paid This Month</MudTh>
+                <MudTh>Balance Due</MudTh>
+                <MudTh>Status</MudTh>
                 <MudTh Style="text-align: right;">Actions</MudTh>
             </HeaderContent>
             <RowTemplate>
+                <!-- Student Name & Avatar -->
                 <MudTd DataLabel="Student">
-                    <MudText Typo="Typo.subtitle2" Class="fw-bold">@context.StudentName</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">Phone: @context.ParentPhone</MudText>
+                    <div class="d-flex align-center gap-3">
+                        <MudAvatar Size="Size.Medium" Style="width: 36px; height: 36px; font-weight: 700; background-color: var(--color-primary-soft); color: var(--color-primary);">
+                            @if (!string.IsNullOrEmpty(context.PhotoUrl))
+                            {
+                                <MudImage Src="@context.PhotoUrl" Alt="@context.StudentName" ObjectFit="ObjectFit.Cover" />
+                            }
+                            else
+                            {
+                                @(string.IsNullOrEmpty(context.StudentName) ? "S" : context.StudentName[0].ToString().ToUpper())
+                            }
+                        </MudAvatar>
+                        <div>
+                            <div style="font-weight: 600; color: var(--color-ink); font-size: 0.88rem;">
+                                @context.StudentName
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(context.PrimaryPhone))
+                            {
+                                <div style="font-size: 0.75rem; color: var(--color-ink-muted);">
+                                    @context.ParentName • @context.PrimaryPhone
+                                </div>
+                            }
+                        </div>
+                    </div>
                 </MudTd>
-                <MudTd DataLabel="Grade & Board">
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">@context.GradeName</MudChip>
-                    <span style="font-size: 0.75rem; color: #64748b; margin-left: 4px;">@context.BoardName</span>
-                </MudTd>
-                <MudTd DataLabel="Plan">
-                    <span style="font-size: 0.85rem;">@context.FeePlanName</span>
-                </MudTd>
-                <MudTd DataLabel="Total" Style="text-align: right;">₹@context.TotalFee.ToString("N0")</MudTd>
-                <MudTd DataLabel="Paid" Style="text-align: right;">
-                    <span style="color: #10B981; font-weight: bold;">₹@context.PaidAmount.ToString("N0")</span>
-                </MudTd>
-                <MudTd DataLabel="Due" Style="text-align: right;">
-                    <span style="color: @(context.DueAmount > 0 ? "#EF4444" : "#10B981"); font-weight: bold;">
-                        ₹@context.DueAmount.ToString("N0")
+
+                <!-- Standard / Class -->
+                <MudTd DataLabel="Standard">
+                    <span class="adorable-badge adorable-badge-info" style="font-size: 0.72rem; padding: 2px 8px;">
+                        @context.GradeName
                     </span>
                 </MudTd>
-                <MudTd DataLabel="Status" Style="text-align: center;">
-                    <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)" Variant="Variant.Filled">
-                        @context.Status
-                    </MudChip>
-                </MudTd>
-                <MudTd Style="text-align: right;" DataLabel="Actions">
-                    <div class="d-flex justify-end gap-1 align-center">
-                        <MudTooltip Text="View Fee Ledger & Installments">
-                            <MudIconButton Icon="@Icons.Material.Filled.MenuBook" Color="Color.Primary" Size="Size.Small"
-                                           OnClick="@(() => OpenLedgerDialog(context.StudentId))" />
-                        </MudTooltip>
 
-                        @if (context.DueAmount > 0)
+                <!-- Monthly Fee Amount (Click to edit) -->
+                <MudTd DataLabel="Monthly Fee">
+                    <div class="d-flex align-center gap-1 cursor-pointer" @onclick="@(() => OpenSetMonthlyFee(context))" title="Click to change monthly fee">
+                        @if (context.MonthlyFeeAmount > 0)
                         {
-                            @if (!string.IsNullOrEmpty(context.WhatsAppPhone))
-                            {
-                                var cleanPhone = context.WhatsAppPhone.Replace("+", "").Replace(" ", "").Replace("-", "");
-                                var reminderMsg = $"Dear Parent, this is a gentle reminder from Bright Minds Tuition Center regarding {context.StudentName} ({context.GradeName}). Tuition fee balance of ₹{context.DueAmount:N0} is pending. Kindly arrange payment. Thank you!";
-                                <MudTooltip Text="WhatsApp Fee Reminder">
-                                    <MudIconButton Icon="@Icons.Custom.Brands.WhatsApp" Color="Color.Success" Size="Size.Small"
-                                                   Href="@($"https://wa.me/{cleanPhone}?text={Uri.EscapeDataString(reminderMsg)}")"
-                                                   Target="_blank" />
-                                </MudTooltip>
-                            }
-                            <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" StartIcon="@Icons.Material.Filled.Payments"
-                                       OnClick="@(() => OpenRecordPaymentDialog(context.StudentId, context.StudentName, context.DueAmount))">
-                                Pay
+                            <span style="font-weight: 700; font-size: 0.9rem; color: var(--color-ink); font-variant-numeric: tabular-nums;">
+                                ₹@context.MonthlyFeeAmount.ToString("N0")
+                            </span>
+                            <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Style="font-size: 14px; color: var(--color-ink-muted);" />
+                        }
+                        else
+                        {
+                            <span class="adorable-badge adorable-badge-neutral" style="font-size: 0.72rem; padding: 2px 6px;">
+                                Set fee
+                            </span>
+                        }
+                    </div>
+                </MudTd>
+
+                <!-- Paid This Month -->
+                <MudTd DataLabel="Paid This Month">
+                    <span style="font-weight: 700; font-size: 0.9rem; color: var(--color-success); font-variant-numeric: tabular-nums;">
+                        ₹@context.PaidAmount.ToString("N0")
+                    </span>
+                    @if (context.PaymentCount > 1)
+                    {
+                        <span style="font-size: 0.7rem; color: var(--color-ink-muted);" class="ml-1">(@context.PaymentCount pymts)</span>
+                    }
+                </MudTd>
+
+                <!-- Balance Due -->
+                <MudTd DataLabel="Balance Due">
+                    @if (context.RemainingAmount > 0)
+                    {
+                        <span style="font-weight: 700; font-size: 0.9rem; color: var(--color-warning); font-variant-numeric: tabular-nums;">
+                            ₹@context.RemainingAmount.ToString("N0")
+                        </span>
+                    }
+                    else
+                    {
+                        <span style="font-size: 0.85rem; color: var(--color-success);">₹0</span>
+                    }
+                </MudTd>
+
+                <!-- Status Chip -->
+                <MudTd DataLabel="Status">
+                    @if (context.MonthlyFeeAmount <= 0)
+                    {
+                        <span class="adorable-badge adorable-badge-neutral" style="font-size: 0.72rem; padding: 3px 8px;">
+                            Fee not set
+                        </span>
+                    }
+                    else if (context.Status == PaymentStatus.Paid)
+                    {
+                        <span class="adorable-badge adorable-badge-success" style="font-size: 0.72rem; padding: 3px 8px;">
+                            <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Style="font-size: 12px; margin-right: 2px;" /> Paid
+                        </span>
+                    }
+                    else if (context.Status == PaymentStatus.PartiallyPaid)
+                    {
+                        <span class="adorable-badge adorable-badge-warning" style="font-size: 0.72rem; padding: 3px 8px;">
+                            Partial (₹@context.RemainingAmount:N0 left)
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="adorable-badge adorable-badge-error" style="font-size: 0.72rem; padding: 3px 8px;">
+                            Unpaid
+                        </span>
+                    }
+                </MudTd>
+
+                <!-- Actions -->
+                <MudTd Style="text-align: right;">
+                    <div class="d-flex align-center justify-end gap-1">
+                        <!-- Record Cash Payment Button -->
+                        @if (context.MonthlyFeeAmount > 0 && context.Status != PaymentStatus.Paid)
+                        {
+                            <MudButton Size="Size.Small"
+                                       Variant="Variant.Filled"
+                                       Color="Color.Success"
+                                       StartIcon="@Icons.Material.Filled.Payments"
+                                       OnClick="@(() => OpenRecordPayment(context))"
+                                       Style="text-transform: none; font-size: 0.75rem; border-radius: 8px; font-weight: 600; padding: 4px 10px;">
+                                Collect
+                            </MudButton>
+                        }
+                        else if (context.MonthlyFeeAmount <= 0)
+                        {
+                            <MudButton Size="Size.Small"
+                                       Variant="Variant.Outlined"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => OpenSetMonthlyFee(context))"
+                                       Style="text-transform: none; font-size: 0.75rem; border-radius: 8px;">
+                                Set Fee
                             </MudButton>
                         }
                         else
                         {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">Cleared</MudChip>
+                            <MudIconButton Icon="@Icons.Material.Filled.Add"
+                                           Size="Size.Small"
+                                           Color="Color.Success"
+                                           Title="Record additional cash payment"
+                                           OnClick="@(() => OpenRecordPayment(context))" />
                         }
-                    </div>
-                </MudTd>
-            </RowTemplate>
-            <NoRecordsContent>
-                <div class="pa-8 text-center">
-                    <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
-                    <MudText Typo="Typo.h6">No student fee records found</MudText>
-                </div>
-            </NoRecordsContent>
-        </MudTable>
-    </MudTabPanel>
 
-    <!-- Tab 2: Overdue & Aging Defaulters Analysis -->
-    <MudTabPanel Text="Aging Defaulters" Icon="@Icons.Material.Filled.WarningAmber" BadgeData="@(_defaultersSummary?.TotalDefaulterCount ?? 0)" BadgeColor="Color.Error">
-        @if (_loadingDefaulters)
-        {
-            <MudProgressLinear Color="Color.Error" Indeterminate="true" Class="mb-3" />
-        }
-        else if (_defaultersSummary != null)
-        {
-            <!-- Aging Breakdown Cards -->
-            <MudGrid Class="mb-4">
-                <MudItem xs="12" sm="6" md="3">
-                    <MudPaper Elevation="0" Outlined="true" Class="pa-3 text-center" Style="border-left: 4px solid #facc15; background: #fefce8;">
-                        <MudText Typo="Typo.caption" Style="color: #854d0e; font-weight: 700;">1 - 15 DAYS OVERDUE</MudText>
-                        <MudText Typo="Typo.h6" Class="fw-bold mt-1" Style="color: #a16207;">₹@_defaultersSummary.Amount1To15Days.ToString("N0")</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@_defaultersSummary.Count1To15Days Students</MudText>
-                    </MudPaper>
-                </MudItem>
-                <MudItem xs="12" sm="6" md="3">
-                    <MudPaper Elevation="0" Outlined="true" Class="pa-3 text-center" Style="border-left: 4px solid #fb923c; background: #fff7ed;">
-                        <MudText Typo="Typo.caption" Style="color: #9a3412; font-weight: 700;">16 - 30 DAYS OVERDUE</MudText>
-                        <MudText Typo="Typo.h6" Class="fw-bold mt-1" Style="color: #c2410c;">₹@_defaultersSummary.Amount16To30Days.ToString("N0")</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@_defaultersSummary.Count16To30Days Students</MudText>
-                    </MudPaper>
-                </MudItem>
-                <MudItem xs="12" sm="6" md="3">
-                    <MudPaper Elevation="0" Outlined="true" Class="pa-3 text-center" Style="border-left: 4px solid #f87171; background: #fef2f2;">
-                        <MudText Typo="Typo.caption" Style="color: #991b1b; font-weight: 700;">31 - 60 DAYS OVERDUE</MudText>
-                        <MudText Typo="Typo.h6" Class="fw-bold mt-1" Style="color: #b91c1c;">₹@_defaultersSummary.Amount31To60Days.ToString("N0")</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@_defaultersSummary.Count31To60Days Students</MudText>
-                    </MudPaper>
-                </MudItem>
-                <MudItem xs="12" sm="6" md="3">
-                    <MudPaper Elevation="0" Outlined="true" Class="pa-3 text-center" Style="border-left: 4px solid #dc2626; background: #fff1f2;">
-                        <MudText Typo="Typo.caption" Style="color: #881337; font-weight: 700;">60+ DAYS CRITICAL</MudText>
-                        <MudText Typo="Typo.h6" Class="fw-bold mt-1" Style="color: #9f1239;">₹@_defaultersSummary.Amount60PlusDays.ToString("N0")</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@_defaultersSummary.Count60PlusDays Students</MudText>
-                    </MudPaper>
-                </MudItem>
-            </MudGrid>
+                        <!-- History / Ledger -->
+                        <MudIconButton Icon="@Icons.Material.Outlined.History"
+                                       Size="Size.Small"
+                                       Color="Color.Default"
+                                       Title="Payment History"
+                                       OnClick="@(() => OpenLedger(context.StudentId))" />
 
-            <!-- Defaulters Table -->
-            <MudTable Items="@_defaultersSummary.Defaulters" Dense="true" Hover="true" Striped="true" Elevation="0">
-                <HeaderContent>
-                    <MudTh>Student Name</MudTh>
-                    <MudTh>Grade</MudTh>
-                    <MudTh>Parent Details</MudTh>
-                    <MudTh Style="text-align: right;">Overdue Amount</MudTh>
-                    <MudTh Style="text-align: center;">Days Overdue</MudTh>
-                    <MudTh Style="text-align: center;">Aging Bracket</MudTh>
-                    <MudTh Style="text-align: right;">Actions</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="Student">
-                        <MudText Typo="Typo.subtitle2" Class="fw-bold">@context.StudentName</MudText>
-                        <span style="font-size: 0.75rem; color: #64748b;">Plan: @context.FeePlanName</span>
-                    </MudTd>
-                    <MudTd DataLabel="Grade">
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">@context.GradeName</MudChip>
-                    </MudTd>
-                    <MudTd DataLabel="Parent">
-                        <div>@context.ParentName</div>
-                        <span style="font-size: 0.75rem; color: #64748b;">@context.ParentPhone</span>
-                    </MudTd>
-                    <MudTd DataLabel="Overdue" Style="text-align: right;">
-                        <strong style="color: #dc2626; font-size: 1rem;">₹@context.OverdueAmount.ToString("N0")</strong>
-                    </MudTd>
-                    <MudTd DataLabel="Days" Style="text-align: center;">
-                        <span style="font-weight: 700; color: #b91c1c;">@context.MaxDaysOverdue days</span>
-                        <div style="font-size: 0.7rem; color: #64748b;">since @context.OldestDueDate.ToString("dd-MMM-yyyy")</div>
-                    </MudTd>
-                    <MudTd DataLabel="Bracket" Style="text-align: center;">
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@GetAgingColor(context.AgingBracket)">
-                            @context.AgingBracket
-                        </MudChip>
-                    </MudTd>
-                    <MudTd Style="text-align: right;" DataLabel="Actions">
-                        <div class="d-flex justify-end gap-1">
-                            <MudTooltip Text="1-Click WhatsApp Reminder">
-                                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
-                                           StartIcon="@Icons.Custom.Brands.WhatsApp"
-                                           OnClick="@(() => SendDefaulterWhatsApp(context))">
-                                    Remind
-                                </MudButton>
-                            </MudTooltip>
-                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
-                                       OnClick="@(() => OpenLedgerDialog(context.StudentId))">
-                                Ledger
-                            </MudButton>
-                        </div>
-                    </MudTd>
-                </RowTemplate>
-                <NoRecordsContent>
-                    <div class="pa-8 text-center">
-                        <MudIcon Icon="@Icons.Material.Filled.CheckCircleOutline" Size="Size.Large" Color="Color.Success" Class="mb-2" />
-                        <MudText Typo="Typo.h6" Color="Color.Success">Great news! No overdue fee defaulters at this time.</MudText>
-                    </div>
-                </NoRecordsContent>
-            </MudTable>
-        }
-    </MudTabPanel>
-
-    <!-- Tab 3: Recent Payment Transactions Log -->
-    <MudTabPanel Text="Transactions & Receipts" Icon="@Icons.Material.Filled.History" BadgeData="@_payments.Count" BadgeColor="Color.Default">
-        @if (_loadingPayments)
-        {
-            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-3" />
-        }
-        <MudTable Items="@_payments" Dense="true" Hover="true" Striped="true" Elevation="0">
-            <HeaderContent>
-                <MudTh>Receipt #</MudTh>
-                <MudTh>Date</MudTh>
-                <MudTh>Student Name</MudTh>
-                <MudTh>Grade</MudTh>
-                <MudTh Style="text-align: right;">Amount</MudTh>
-                <MudTh>Mode</MudTh>
-                <MudTh>Ref / Trx</MudTh>
-                <MudTh>Received By</MudTh>
-                <MudTh Style="text-align: center;">Receipt</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="Receipt #">
-                    <span class="fw-bold" style="color: #1e3a8a;">@context.ReceiptNumber</span>
-                </MudTd>
-                <MudTd DataLabel="Date">@context.PaymentDate.ToString("dd MMM yyyy")</MudTd>
-                <MudTd DataLabel="Student">
-                    <MudText Typo="Typo.subtitle2" Class="fw-bold">@context.StudentName</MudText>
-                </MudTd>
-                <MudTd DataLabel="Grade">
-                    <span style="font-size: 0.85rem;">@context.GradeName</span>
-                </MudTd>
-                <MudTd DataLabel="Amount" Style="text-align: right;">
-                    <strong style="color: #10B981; font-size: 0.95rem;">₹@context.Amount.ToString("N0")</strong>
-                </MudTd>
-                <MudTd DataLabel="Mode">
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info">@context.PaymentMode</MudChip>
-                </MudTd>
-                <MudTd DataLabel="Ref">@(context.TransactionRef ?? "-")</MudTd>
-                <MudTd DataLabel="Received By">@context.ReceivedByName</MudTd>
-                <MudTd DataLabel="Receipt" Style="text-align: center;">
-                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.ReceiptLong"
-                               OnClick="@(() => OpenReceiptDialog(context.Id))">
-                        View Receipt
-                    </MudButton>
-                </MudTd>
-            </RowTemplate>
-            <NoRecordsContent>
-                <div class="pa-8 text-center">
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">No payment transactions recorded yet.</MudText>
-                </div>
-            </NoRecordsContent>
-        </MudTable>
-    </MudTabPanel>
-
-    <!-- Tab 4: Financial Analytics & Revenue Trends -->
-    <MudTabPanel Text="Financial Analytics" Icon="@Icons.Material.Filled.Analytics">
-        <MudGrid Class="mb-4">
-            <!-- Monthly Trends Table -->
-            <MudItem xs="12" md="7">
-                <MudCard Elevation="0" Outlined="true" Class="pa-4">
-                    <MudText Typo="Typo.subtitle1" Class="fw-bold mb-3">
-                        <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Color="Color.Primary" Class="mr-1" Style="vertical-align: text-bottom;" />
-                        Monthly Collection Trends (Last 12 Months)
-                    </MudText>
-                    @if (_monthlyTrends.Any())
-                    {
-                        var maxMonth = _monthlyTrends.Max(m => m.CollectedAmount);
-                        <MudTable Items="_monthlyTrends.OrderByDescending(m => m.Year).ThenByDescending(m => m.Month)" Dense="true" Hover="true" Elevation="0">
-                            <HeaderContent>
-                                <MudTh>Month</MudTh>
-                                <MudTh Style="text-align: right;">Total Collected</MudTh>
-                                <MudTh Style="text-align: center;">Transactions</MudTh>
-                                <MudTh>Volume Bar</MudTh>
-                            </HeaderContent>
-                            <RowTemplate>
-                                <MudTd DataLabel="Month" Class="fw-bold">@context.MonthName</MudTd>
-                                <MudTd DataLabel="Collected" Style="text-align: right; color: #166534; font-weight: 700;">
-                                    ₹@context.CollectedAmount.ToString("N0")
-                                </MudTd>
-                                <MudTd DataLabel="Transactions" Style="text-align: center;">
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.TransactionCount txns</MudChip>
-                                </MudTd>
-                                <MudTd DataLabel="Volume">
-                                    @{
-                                        var pct = maxMonth > 0 ? (double)(context.CollectedAmount / maxMonth) * 100 : 0;
-                                    }
-                                    <MudProgressLinear Color="Color.Success" Value="@pct" Size="Size.Medium" Rounded="true" />
-                                </MudTd>
-                            </RowTemplate>
-                        </MudTable>
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">No monthly data available.</MudText>
-                    }
-                </MudCard>
-            </MudItem>
-
-            <!-- Payment Modes Breakdown -->
-            <MudItem xs="12" md="5">
-                <MudCard Elevation="0" Outlined="true" Class="pa-4 mb-4">
-                    <MudText Typo="Typo.subtitle1" Class="fw-bold mb-3">
-                        <MudIcon Icon="@Icons.Material.Filled.PieChart" Color="Color.Info" Class="mr-1" Style="vertical-align: text-bottom;" />
-                        Payment Mode Breakdown
-                    </MudText>
-                    @if (_paymentModes.Any())
-                    {
-                        @foreach (var pm in _paymentModes)
+                        <!-- Mock WhatsApp Notify Button -->
+                        @if (context.Status != PaymentStatus.Paid && context.MonthlyFeeAmount > 0)
                         {
-                            <div class="mb-3">
-                                <div class="d-flex justify-space-between align-center mb-1">
-                                    <span class="fw-bold">@pm.ModeName</span>
-                                    <span>
-                                        <strong style="color: #166534;">₹@pm.TotalAmount.ToString("N0")</strong>
-                                        <span style="font-size: 0.75rem; color: #64748b; margin-left: 4px;">(@pm.Percentage%)</span>
-                                    </span>
-                                </div>
-                                <MudProgressLinear Color="@GetModeColor(pm.Mode)" Value="@((double)pm.Percentage)" Size="Size.Small" Rounded="true" />
-                                <div class="d-flex justify-end mt-1">
-                                    <span style="font-size: 0.72rem; color: #64748b;">@pm.TransactionCount transactions</span>
-                                </div>
-                            </div>
+                            <MudIconButton Icon="@Icons.Custom.Brands.WhatsApp"
+                                           Size="Size.Small"
+                                           Color="Color.Success"
+                                           Title="Send reminder"
+                                           OnClick="@(() => ShowMockWhatsAppSnackbar(context.StudentName))" />
                         }
-                    }
-                    else
-                    {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">No transaction modes recorded.</MudText>
-                    }
-                </MudCard>
-            </MudItem>
-
-            <!-- Grade Wise Collection Efficiency -->
-            <MudItem xs="12">
-                <MudCard Elevation="0" Outlined="true" Class="pa-4">
-                    <MudText Typo="Typo.subtitle1" Class="fw-bold mb-3">
-                        <MudIcon Icon="@Icons.Material.Filled.School" Color="Color.Secondary" Class="mr-1" Style="vertical-align: text-bottom;" />
-                        Grade-Wise Collection Efficiency
-                    </MudText>
-                    <MudTable Items="_gradeSummaries" Dense="true" Hover="true" Elevation="0">
-                        <HeaderContent>
-                            <MudTh>Grade</MudTh>
-                            <MudTh Style="text-align: center;">Students</MudTh>
-                            <MudTh Style="text-align: right;">Total Expected</MudTh>
-                            <MudTh Style="text-align: right;">Total Collected</MudTh>
-                            <MudTh Style="text-align: right;">Pending</MudTh>
-                            <MudTh Style="text-align: center;">Defaulters</MudTh>
-                            <MudTh>Collection Efficiency</MudTh>
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd DataLabel="Grade" Class="fw-bold">@context.GradeName</MudTd>
-                            <MudTd DataLabel="Students" Style="text-align: center;">@context.StudentCount</MudTd>
-                            <MudTd DataLabel="Expected" Style="text-align: right;">₹@context.TotalExpected.ToString("N0")</MudTd>
-                            <MudTd DataLabel="Collected" Style="text-align: right; color: #166534; font-weight: 700;">
-                                ₹@context.TotalCollected.ToString("N0")
-                            </MudTd>
-                            <MudTd DataLabel="Pending" Style="@($"text-align: right; color: {(context.TotalPending > 0 ? "#b91c1c" : "#166534")}; font-weight: 600;")">
-                                ₹@context.TotalPending.ToString("N0")
-                            </MudTd>
-                            <MudTd DataLabel="Defaulters" Style="text-align: center;">
-                                @if (context.DefaulterCount > 0)
-                                {
-                                    <MudChip T="string" Color="Color.Error" Size="Size.Small" Variant="Variant.Outlined">@context.DefaulterCount</MudChip>
-                                }
-                                else
-                                {
-                                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Outlined">0</MudChip>
-                                }
-                            </MudTd>
-                            <MudTd DataLabel="Efficiency">
-                                <div class="d-flex align-center gap-2">
-                                    <MudProgressLinear Color="@(context.CollectionRate >= 80 ? Color.Success : context.CollectionRate >= 50 ? Color.Warning : Color.Error)"
-                                                       Value="@((double)context.CollectionRate)" Size="Size.Medium" Rounded="true" Style="min-width: 80px;" />
-                                    <span style="font-weight: 700; font-size: 0.8rem;">@context.CollectionRate%</span>
-                                </div>
-                            </MudTd>
-                        </RowTemplate>
-                    </MudTable>
-                </MudCard>
-            </MudItem>
-        </MudGrid>
-    </MudTabPanel>
-</MudTabs>
+                    </div>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</div>
 
 @code {
-    private List<StudentFeeSummaryDto> _summaries = new();
-    private List<PaymentDto> _payments = new();
+    private DateTime _currentMonthDate = DateTime.Today;
+    private List<StudentMonthlyStatusDto> _students = new();
     private List<GradeDto> _grades = new();
-    private FeeDefaultersSummaryDto? _defaultersSummary;
-    private List<MonthlyCollectionDto> _monthlyTrends = new();
-    private List<PaymentModeBreakdownDto> _paymentModes = new();
-    private List<GradeFinancialSummaryDto> _gradeSummaries = new();
+    private int _selectedGradeId = 0;
+    private string _selectedStatusFilter = "All";
+    private string _searchQuery = string.Empty;
+    private bool _loading = true;
 
-    private int? _filterGradeId;
-    private PaymentStatus? _filterStatus;
-    private bool _loadingSummaries = true;
-    private bool _loadingPayments = true;
-    private bool _loadingDefaulters = true;
+    private int _totalStudentsCount => _students.Count;
+    private int _paidStudentsCount => _students.Count(s => s.Status == PaymentStatus.Paid);
+    private int _unpaidStudentsCount => _students.Count(s => s.Status != PaymentStatus.Paid && s.MonthlyFeeAmount > 0);
+    private decimal _totalExpectedSum => _students.Sum(s => s.MonthlyFeeAmount);
+    private decimal _totalPaidSum => _students.Sum(s => s.PaidAmount);
+    private decimal _totalDueSum => _students.Sum(s => s.RemainingAmount);
+    private decimal _collectionRate => _totalExpectedSum > 0 ? Math.Round((_totalPaidSum / _totalExpectedSum) * 100, 1) : 0;
+
+    private IEnumerable<StudentMonthlyStatusDto> FilteredStudents
+    {
+        get
+        {
+            var query = _students.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(_searchQuery))
+            {
+                query = query.Where(s => s.StudentName.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                                         s.PrimaryPhone.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (_selectedGradeId > 0)
+            {
+                // Note: GradeId is filtered in API or we filter by GradeName
+            }
+
+            if (_selectedStatusFilter == "Paid")
+                query = query.Where(s => s.Status == PaymentStatus.Paid);
+            else if (_selectedStatusFilter == "Partial")
+                query = query.Where(s => s.Status == PaymentStatus.PartiallyPaid);
+            else if (_selectedStatusFilter == "Unpaid")
+                query = query.Where(s => s.Status == PaymentStatus.Pending && s.MonthlyFeeAmount > 0);
+            else if (_selectedStatusFilter == "NoFee")
+                query = query.Where(s => s.MonthlyFeeAmount <= 0);
+
+            return query;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        var gRes = await ApiService.GetGradesAsync();
-        if (gRes?.Success == true && gRes.Data != null) _grades = gRes.Data;
-
-        await RefreshAll();
+        await LoadGrades();
+        await LoadData();
     }
 
-    private async Task RefreshAll()
+    private async Task LoadGrades()
     {
-        await LoadFeeSummaries();
-        await LoadPayments();
-        await LoadDefaulters();
-        await LoadAnalytics();
-    }
-
-    private async Task OnGradeFilterChanged(int? gradeId)
-    {
-        _filterGradeId = gradeId;
-        await LoadFeeSummaries();
-    }
-
-    private async Task OnStatusFilterChanged(PaymentStatus? status)
-    {
-        _filterStatus = status;
-        await LoadFeeSummaries();
-    }
-
-    private async Task LoadFeeSummaries()
-    {
-        _loadingSummaries = true;
         try
         {
-            var res = await ApiService.GetStudentFeeSummariesAsync(_filterGradeId, _filterStatus);
+            var res = await ApiService.GetGradesAsync();
             if (res?.Success == true && res.Data != null)
             {
-                _summaries = res.Data;
+                _grades = res.Data;
+            }
+        }
+        catch { }
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        try
+        {
+            var res = await ApiService.GetMonthlyStatusAsync(
+                _currentMonthDate.Month,
+                _currentMonthDate.Year,
+                _selectedGradeId > 0 ? _selectedGradeId : null);
+
+            if (res?.Success == true && res.Data != null)
+            {
+                _students = res.Data;
+            }
+            else
+            {
+                _students = new();
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading fee summaries: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error loading fees: {ex.Message}", Severity.Error);
         }
         finally
         {
-            _loadingSummaries = false;
+            _loading = false;
         }
     }
 
-    private async Task LoadPayments()
+    private async Task PrevMonth()
     {
-        _loadingPayments = true;
-        try
-        {
-            var res = await ApiService.GetPaymentsAsync();
-            if (res?.Success == true && res.Data != null)
-            {
-                _payments = res.Data;
-            }
-        }
-        catch { }
-        finally
-        {
-            _loadingPayments = false;
-        }
+        _currentMonthDate = _currentMonthDate.AddMonths(-1);
+        await LoadData();
     }
 
-    private async Task LoadDefaulters()
+    private async Task NextMonth()
     {
-        _loadingDefaulters = true;
-        try
-        {
-            var res = await ApiService.GetFeeDefaultersSummaryAsync();
-            if (res?.Success == true && res.Data != null)
-            {
-                _defaultersSummary = res.Data;
-            }
-        }
-        catch { }
-        finally
-        {
-            _loadingDefaulters = false;
-        }
+        _currentMonthDate = _currentMonthDate.AddMonths(1);
+        await LoadData();
     }
 
-    private async Task LoadAnalytics()
+    private async Task GoToCurrentMonth()
     {
-        try
-        {
-            var mRes = await ApiService.GetMonthlyCollectionTrendAsync();
-            if (mRes?.Success == true && mRes.Data != null) _monthlyTrends = mRes.Data;
-
-            var pRes = await ApiService.GetPaymentModeBreakdownAsync();
-            if (pRes?.Success == true && pRes.Data != null) _paymentModes = pRes.Data;
-
-            var gRes = await ApiService.GetGradeFinancialSummariesAsync();
-            if (gRes?.Success == true && gRes.Data != null) _gradeSummaries = gRes.Data;
-        }
-        catch { }
+        _currentMonthDate = DateTime.Today;
+        await LoadData();
     }
 
-    private static Color GetStatusColor(PaymentStatus status) => status switch
+    private async Task OnGradeFilterChanged(int gradeId)
     {
-        PaymentStatus.Paid => Color.Success,
-        PaymentStatus.PartiallyPaid => Color.Info,
-        PaymentStatus.Pending => Color.Warning,
-        PaymentStatus.Overdue => Color.Error,
-        _ => Color.Default
-    };
-
-    private static Color GetAgingColor(string bracket) => bracket switch
-    {
-        "1-15 days" => Color.Warning,
-        "16-30 days" => Color.Warning,
-        "31-60 days" => Color.Error,
-        "60+ days" => Color.Error,
-        _ => Color.Default
-    };
-
-    private static Color GetModeColor(PaymentMode mode) => mode switch
-    {
-        PaymentMode.Cash => Color.Success,
-        PaymentMode.UPI => Color.Primary,
-        PaymentMode.BankTransfer => Color.Info,
-        PaymentMode.Cheque => Color.Secondary,
-        _ => Color.Default
-    };
-
-    private async Task OpenReceiptDialog(int paymentId)
-    {
-        var parameters = new DialogParameters<PaymentReceiptDialog>
-        {
-            { x => x.PaymentId, paymentId }
-        };
-        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
-        await DialogService.ShowAsync<PaymentReceiptDialog>("Fee Receipt", parameters, options);
+        _selectedGradeId = gradeId;
+        await LoadData();
     }
 
-    private async Task OpenLedgerDialog(int studentId)
+    private async Task OpenRecordPayment(StudentMonthlyStatusDto student)
     {
-        var parameters = new DialogParameters<StudentLedgerDialog>
+        var parameters = new DialogParameters
         {
-            { x => x.StudentId, studentId }
-        };
-        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
-        await DialogService.ShowAsync<StudentLedgerDialog>("Student Fee Ledger", parameters, options);
-    }
-
-    private async Task SendDefaulterWhatsApp(FeeDefaulterItemDto item)
-    {
-        if (string.IsNullOrEmpty(item.WhatsAppPhone) && string.IsNullOrEmpty(item.ParentPhone))
-        {
-            Snackbar.Add("No parent phone available", Severity.Warning);
-            return;
-        }
-
-        var phone = !string.IsNullOrEmpty(item.WhatsAppPhone) ? item.WhatsAppPhone : item.ParentPhone;
-        phone = phone.Replace(" ", "").Replace("-", "").Replace("+", "");
-        if (phone.Length == 10) phone = "91" + phone;
-
-        var encoded = Uri.EscapeDataString(item.FormattedReminderMessage);
-        var url = $"https://wa.me/{phone}?text={encoded}";
-
-        await JS.InvokeVoidAsync("open", url, "_blank");
-
-        await ApiService.LogWhatsAppDispatchAsync(new LogWhatsAppDispatchDto
-        {
-            StudentId = item.StudentId,
-            RecipientName = item.ParentName,
-            RecipientPhone = item.ParentPhone,
-            MessageCategory = "FeeReminder",
-            MessageBody = item.FormattedReminderMessage
-        });
-
-        Snackbar.Add($"WhatsApp opened for {item.StudentName} & reminder logged", Severity.Success);
-    }
-
-    private async Task OpenRecordPaymentDialog(int studentId, string studentName, decimal dueAmount)
-    {
-        var parameters = new DialogParameters<RecordPaymentDialog>
-        {
-            { x => x.StudentId, studentId },
-            { x => x.StudentName, studentName },
-            { x => x.DueAmount, dueAmount }
+            ["StudentId"] = student.StudentId,
+            ["StudentName"] = student.StudentName,
+            ["GradeName"] = student.GradeName,
+            ["MonthlyFeeAmount"] = student.MonthlyFeeAmount,
+            ["DueAmount"] = student.RemainingAmount
         };
 
-        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
-        var dialog = await DialogService.ShowAsync<RecordPaymentDialog>("Record Payment", parameters, options);
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<RecordPaymentDialog>("Record Cash Payment", parameters, options);
         var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is int paymentId)
+        {
+            await LoadData();
+            // Automatically offer receipt
+            var rParams = new DialogParameters { ["PaymentId"] = paymentId };
+            await DialogService.ShowAsync<PaymentReceiptDialog>("Official Receipt", rParams, options);
+        }
+    }
+
+    private async Task OpenSetMonthlyFee(StudentMonthlyStatusDto student)
+    {
+        var parameters = new DialogParameters
+        {
+            ["StudentId"] = student.StudentId,
+            ["StudentName"] = student.StudentName,
+            ["CurrentAmount"] = student.MonthlyFeeAmount
+        };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.ExtraSmall, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<SetMonthlyFeeDialog>("Set Monthly Fee", parameters, options);
+        var result = await dialog.Result;
+
         if (result != null && !result.Canceled)
         {
-            await RefreshAll();
-            if (result.Data is int paymentId && paymentId > 0)
-            {
-                await OpenReceiptDialog(paymentId);
-            }
+            await LoadData();
         }
+    }
+
+    private async Task OpenLedger(int studentId)
+    {
+        var parameters = new DialogParameters { ["StudentId"] = studentId };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        await DialogService.ShowAsync<StudentLedgerDialog>("Payment History", parameters, options);
+    }
+
+    private void ShowMockWhatsAppSnackbar(string studentName)
+    {
+        Snackbar.Add($"WhatsApp alerts coming soon for {studentName}. Feature not yet activated.", Severity.Info);
     }
 }

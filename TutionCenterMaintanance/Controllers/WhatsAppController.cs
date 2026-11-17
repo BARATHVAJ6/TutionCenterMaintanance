@@ -180,8 +180,6 @@ public class WhatsAppController : ControllerBase
             .Include(s => s.Grade)
             .Include(s => s.Board)
             .Include(s => s.Parent)
-            .Include(s => s.StudentFeePlans)
-                .ThenInclude(sfp => sfp.Installments)
             .Include(s => s.Payments)
             .Where(s => s.IsActive);
 
@@ -193,13 +191,18 @@ public class WhatsAppController : ControllerBase
         var students = await studentsQuery.ToListAsync();
         var targets = new List<BulkWhatsAppRecipientDto>();
 
+        var currentMonthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        var currentMonthEnd = currentMonthStart.AddMonths(1).AddTicks(-1);
+
         foreach (var s in students)
         {
-            var totalFee = s.StudentFeePlans.Sum(sfp => sfp.FinalAmount);
-            var paid = s.Payments.Sum(p => p.Amount);
-            var due = totalFee - paid;
+            var totalFee = s.MonthlyFeeAmount;
+            var paidThisMonth = s.Payments
+                .Where(p => p.PaymentDate >= currentMonthStart && p.PaymentDate <= currentMonthEnd)
+                .Sum(p => p.Amount);
+            var due = Math.Max(0, totalFee - paidThisMonth);
 
-            if (due <= 0) continue;
+            if (due <= 0 && totalFee > 0) continue;
 
             var phone = !string.IsNullOrEmpty(s.Parent.FatherWhatsApp) ? s.Parent.FatherWhatsApp : s.Parent.FatherPhone;
             var cleanPhone = CleanPhoneNumber(phone);

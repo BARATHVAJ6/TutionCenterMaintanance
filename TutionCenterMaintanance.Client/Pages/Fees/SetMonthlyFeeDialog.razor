@@ -1,0 +1,95 @@
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <div style="width: 36px; height: 36px; border-radius: 10px; background-color: var(--color-primary-soft); display: flex; align-items: center; justify-content: center;">
+                <MudIcon Icon="@Icons.Material.Filled.Edit" Style="color: var(--color-primary); font-size: 20px;" />
+            </div>
+            <div>
+                <MudText Typo="Typo.h6" Class="fw-bold">Set Monthly Tuition Fee</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Fixed monthly fee for @StudentName</MudText>
+            </div>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudNumericField T="decimal"
+                         @bind-Value="_amount"
+                         Label="Monthly Fee Amount (₹) *"
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Dense"
+                         Min="0"
+                         Step="100"
+                         HelperText="Enter the agreed monthly cash tuition fee for this student" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save" Disabled="_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Save Fee</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public int StudentId { get; set; }
+
+    [Parameter]
+    public string StudentName { get; set; } = string.Empty;
+
+    [Parameter]
+    public decimal CurrentAmount { get; set; }
+
+    private decimal _amount;
+    private bool _saving = false;
+
+    protected override void OnInitialized()
+    {
+        _amount = CurrentAmount;
+    }
+
+    private async Task Save()
+    {
+        _saving = true;
+        try
+        {
+            var res = await ApiService.SetMonthlyFeeAsync(new SetMonthlyFeeRequest
+            {
+                StudentId = StudentId,
+                MonthlyFeeAmount = _amount
+            });
+
+            if (res?.Success == true)
+            {
+                Snackbar.Add($"Monthly fee for {StudentName} set to ₹{_amount:N0}!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to update monthly fee.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

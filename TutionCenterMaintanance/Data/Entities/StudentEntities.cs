@@ -19,13 +19,13 @@ public class Student : BaseEntity
     public string? BloodGroup { get; set; }
     public string? MedicalNotes { get; set; }
     public string? PreviousRecords { get; set; }
+    public decimal MonthlyFeeAmount { get; set; } = 0;
     public bool IsActive { get; set; } = true;
 
     public ParentInfo Parent { get; set; } = null!;
     public ICollection<StudentBatch> StudentBatches { get; set; } = new List<StudentBatch>();
     public ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
     public ICollection<Mark> Marks { get; set; } = new List<Mark>();
-    public ICollection<StudentFeePlan> StudentFeePlans { get; set; } = new List<StudentFeePlan>();
     public ICollection<Payment> Payments { get; set; } = new List<Payment>();
 }
 

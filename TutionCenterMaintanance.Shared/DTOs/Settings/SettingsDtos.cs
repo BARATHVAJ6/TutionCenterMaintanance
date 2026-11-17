@@ -6,7 +6,7 @@ public class CenterSettingsDto
 {
     public int Id { get; set; }
     [Required]
-    public string CenterName { get; set; } = "Bright Minds Tuition Center";
+    public string CenterName { get; set; } = "Sai Tuition Center";
     public string? Tagline { get; set; } = "Excellence in Learning from UKG to Grade 12";
     public string? LogoBase64 { get; set; }
     public string? Address { get; set; } = "Main Road, Center City";

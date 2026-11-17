@@ -4,187 +4,306 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 
-<PageTitle>Dashboard - Tuition Center</PageTitle>
+<PageTitle>Dashboard - Sai Tuition Center</PageTitle>
 
-<div class="mb-4 d-flex justify-space-between align-center">
+<!-- Welcoming Top Bar -->
+<div class="mb-6 d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center gap-3">
     <div>
-        <MudText Typo="Typo.h5" Class="fw-bold">Center Overview & Operations</MudText>
-        <MudText Typo="Typo.body2" Color="Color.Secondary">Real-time summary of students, performance, fees, and attendance</MudText>
+        <h1 style="font-size: 1.5rem; font-weight: 700; color: var(--color-ink); margin: 0; letter-spacing: -0.02em;">
+            Center overview & operations
+        </h1>
+        <p style="font-size: 0.88rem; color: var(--color-ink-secondary); margin: 4px 0 0 0;">
+            Real-time status of students, daily attendance, tests, and fee collections
+        </p>
     </div>
-    <div class="d-flex gap-2">
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="@(() => Navigation.NavigateTo("/students"))">
-            Add Student
+    <div class="d-flex align-center gap-2">
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Outlined.PersonAdd"
+                   OnClick="@(() => Navigation.NavigateTo("/students"))"
+                   Style="border-radius: 10px; font-weight: 600; text-transform: none; padding: 8px 16px;">
+            Add student
         </MudButton>
-        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.FactCheck" OnClick="@(() => Navigation.NavigateTo("/attendance"))">
-            Mark Attendance
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Default"
+                   StartIcon="@Icons.Material.Outlined.FactCheck"
+                   OnClick="@(() => Navigation.NavigateTo("/attendance"))"
+                   Style="border-radius: 10px; font-weight: 600; text-transform: none; border-color: var(--color-rule); padding: 8px 16px;">
+            Mark attendance
         </MudButton>
     </div>
 </div>
 
 @if (_loading)
 {
-    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4 rounded-pill" />
 }
 else if (_stats != null)
 {
-    <!-- Stat KPI Cards -->
+    <!-- Stat KPI Cards (Hallmark Anti-AI-Slop: Untracked sentence-case labels, soft icons, tabular numbers) -->
     <MudGrid Class="mb-6">
+        <!-- Active Students -->
         <MudItem xs="12" sm="6" md="3">
-            <MudCard Elevation="2" Class="pa-4 rounded-xl border-l-4 border-l-primary">
-                <div class="d-flex justify-space-between align-center">
-                    <div>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="fw-bold">ACTIVE STUDENTS</MudText>
-                        <MudText Typo="Typo.h4" Class="fw-bold mt-1">@_stats.TotalActiveStudents</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Primary">UKG to Grade 12</MudText>
+            <div class="pa-4 rounded-xl card-hover-subtle"
+                 style="background-color: var(--color-surface); border: 1px solid var(--color-rule); box-shadow: var(--shadow-sm); border-radius: 16px;">
+                <div class="d-flex justify-space-between align-start mb-2">
+                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--color-ink-secondary);">
+                        Active students
+                    </span>
+                    <div style="width: 42px; height: 42px; border-radius: 12px; background-color: var(--color-primary-soft); display: flex; align-items: center; justify-content: center;">
+                        <MudIcon Icon="@Icons.Material.Outlined.School" Style="color: var(--color-primary); font-size: 22px;" />
                     </div>
-                    <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Large">
-                        <MudIcon Icon="@Icons.Material.Filled.People" />
-                    </MudAvatar>
                 </div>
-            </MudCard>
+                <div style="font-size: 1.85rem; font-weight: 700; color: var(--color-ink); letter-spacing: -0.02em; font-variant-numeric: tabular-nums;">
+                    @_stats.TotalActiveStudents
+                </div>
+                <div class="d-flex align-center gap-1 mt-1">
+                    <span class="adorable-badge adorable-badge-primary" style="font-size: 0.72rem; padding: 2px 8px;">
+                        UKG to Grade 12
+                    </span>
+                </div>
+            </div>
         </MudItem>
 
+        <!-- Today's Attendance -->
         <MudItem xs="12" sm="6" md="3">
-            <MudCard Elevation="2" Class="pa-4 rounded-xl border-l-4 border-l-success">
-                <div class="d-flex justify-space-between align-center">
-                    <div>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="fw-bold">TODAY'S ATTENDANCE</MudText>
-                        <MudText Typo="Typo.h4" Class="fw-bold mt-1">@_stats.TodayAttendancePercentage%</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Success">@_stats.TodayPresentCount Present / @_stats.TodayAbsentCount Absent</MudText>
+            <div class="pa-4 rounded-xl card-hover-subtle"
+                 style="background-color: var(--color-surface); border: 1px solid var(--color-rule); box-shadow: var(--shadow-sm); border-radius: 16px;">
+                <div class="d-flex justify-space-between align-start mb-2">
+                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--color-ink-secondary);">
+                        Today's attendance
+                    </span>
+                    <div style="width: 42px; height: 42px; border-radius: 12px; background-color: var(--color-success-soft); display: flex; align-items: center; justify-content: center;">
+                        <MudIcon Icon="@Icons.Material.Outlined.CheckCircleOutline" Style="color: var(--color-success); font-size: 22px;" />
                     </div>
-                    <MudAvatar Color="Color.Success" Variant="Variant.Filled" Size="Size.Large">
-                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" />
-                    </MudAvatar>
                 </div>
-            </MudCard>
+                <div style="font-size: 1.85rem; font-weight: 700; color: var(--color-ink); letter-spacing: -0.02em; font-variant-numeric: tabular-nums;">
+                    @_stats.TodayAttendancePercentage%
+                </div>
+                <div class="d-flex align-center gap-1 mt-1">
+                    <span class="adorable-badge adorable-badge-success" style="font-size: 0.72rem; padding: 2px 8px;">
+                        @_stats.TodayPresentCount present, @_stats.TodayAbsentCount absent
+                    </span>
+                </div>
+            </div>
         </MudItem>
 
+        <!-- Fees Collected & Financials -->
         <MudItem xs="12" sm="6" md="3">
-            <MudCard Elevation="2" Class="pa-4 rounded-xl border-l-4 border-l-info">
-                <div class="d-flex justify-space-between align-center">
-                    <div>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="fw-bold">FEES COLLECTED (MONTH)</MudText>
-                        <MudText Typo="Typo.h4" Class="fw-bold mt-1">₹@_stats.TotalFeesCollectedMonth.ToString("N0")</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Info">Collected this month</MudText>
+            <div class="pa-4 rounded-xl card-hover-subtle cursor-pointer"
+                 @onclick="@(() => Navigation.NavigateTo("/financials"))"
+                 title="Click to view full financial report"
+                 style="background-color: var(--color-surface); border: 1px solid var(--color-rule); box-shadow: var(--shadow-sm); border-radius: 16px;">
+                <div class="d-flex justify-space-between align-start mb-2">
+                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--color-ink-secondary);">
+                        Monthly collections
+                    </span>
+                    <div style="width: 42px; height: 42px; border-radius: 12px; background-color: var(--color-info-soft); display: flex; align-items: center; justify-content: center;">
+                        <MudIcon Icon="@Icons.Material.Outlined.Payments" Style="color: var(--color-info); font-size: 22px;" />
                     </div>
-                    <MudAvatar Color="Color.Info" Variant="Variant.Filled" Size="Size.Large">
-                        <MudIcon Icon="@Icons.Material.Filled.CurrencyRupee" />
-                    </MudAvatar>
                 </div>
-            </MudCard>
+                <div style="font-size: 1.85rem; font-weight: 700; color: var(--color-ink); letter-spacing: -0.02em; font-variant-numeric: tabular-nums;">
+                    ₹@_stats.TotalFeesCollectedMonth.ToString("N0")
+                </div>
+                <div class="d-flex align-center justify-space-between mt-1" style="font-size: 0.72rem; color: var(--color-ink-muted);">
+                    <span>Expenses ₹@_stats.TotalExpensesMonth.ToString("N0")</span>
+                    <span style="font-weight: 600; color: @(_stats.NetOperatingProfitMonth >= 0 ? "var(--color-success)" : "var(--color-error)");">
+                        Net ₹@_stats.NetOperatingProfitMonth.ToString("N0")
+                    </span>
+                </div>
+            </div>
         </MudItem>
 
+        <!-- Active Batches -->
         <MudItem xs="12" sm="6" md="3">
-            <MudCard Elevation="2" Class="pa-4 rounded-xl border-l-4 border-l-warning">
-                <div class="d-flex justify-space-between align-center">
-                    <div>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="fw-bold">ACTIVE BATCHES</MudText>
-                        <MudText Typo="Typo.h4" Class="fw-bold mt-1">@_stats.TotalBatches</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Warning">@_stats.TotalTeachers Teachers</MudText>
+            <div class="pa-4 rounded-xl card-hover-subtle"
+                 style="background-color: var(--color-surface); border: 1px solid var(--color-rule); box-shadow: var(--shadow-sm); border-radius: 16px;">
+                <div class="d-flex justify-space-between align-start mb-2">
+                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--color-ink-secondary);">
+                        Active batches
+                    </span>
+                    <div style="width: 42px; height: 42px; border-radius: 12px; background-color: var(--color-warning-soft); display: flex; align-items: center; justify-content: center;">
+                        <MudIcon Icon="@Icons.Material.Outlined.Groups" Style="color: var(--color-warning); font-size: 22px;" />
                     </div>
-                    <MudAvatar Color="Color.Warning" Variant="Variant.Filled" Size="Size.Large">
-                        <MudIcon Icon="@Icons.Material.Filled.Groups" />
-                    </MudAvatar>
                 </div>
-            </MudCard>
+                <div style="font-size: 1.85rem; font-weight: 700; color: var(--color-ink); letter-spacing: -0.02em; font-variant-numeric: tabular-nums;">
+                    @_stats.TotalBatches
+                </div>
+                <div class="d-flex align-center gap-1 mt-1">
+                    <span class="adorable-badge adorable-badge-warning" style="font-size: 0.72rem; padding: 2px 8px;">
+                        @_stats.TotalTeachers teachers assigned
+                    </span>
+                </div>
+            </div>
         </MudItem>
     </MudGrid>
 
     <MudGrid>
-        <!-- Quick Action Tiles -->
+        <!-- Quick Operations Section -->
         <MudItem xs="12" md="7">
-            <MudCard Elevation="2" Class="pa-4 rounded-xl h-100">
-                <MudText Typo="Typo.h6" Class="fw-bold mb-3">Quick Operations</MudText>
-                <MudGrid>
-                    <MudItem xs="6" sm="4">
-                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" Class="py-3 flex-column h-100"
-                                   OnClick="@(() => Navigation.NavigateTo("/students"))">
-                            <MudIcon Icon="@Icons.Material.Filled.School" Size="Size.Large" Class="mb-1" />
-                            <MudText Typo="Typo.body2">Student Records</MudText>
-                        </MudButton>
-                    </MudItem>
-                    <MudItem xs="6" sm="4">
-                        <MudButton Variant="Variant.Outlined" Color="Color.Success" FullWidth="true" Class="py-3 flex-column h-100"
-                                   OnClick="@(() => Navigation.NavigateTo("/marks/bulk-entry"))">
-                            <MudIcon Icon="@Icons.Material.Filled.Scoreboard" Size="Size.Large" Class="mb-1" />
-                            <MudText Typo="Typo.body2">Enter Marks</MudText>
-                        </MudButton>
-                    </MudItem>
-                    <MudItem xs="6" sm="4">
-                        <MudButton Variant="Variant.Outlined" Color="Color.Info" FullWidth="true" Class="py-3 flex-column h-100"
-                                   OnClick="@(() => Navigation.NavigateTo("/fees"))">
-                            <MudIcon Icon="@Icons.Material.Filled.Receipt" Size="Size.Large" Class="mb-1" />
-                            <MudText Typo="Typo.body2">Record Payment</MudText>
-                        </MudButton>
-                    </MudItem>
-                    <MudItem xs="6" sm="4">
-                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" FullWidth="true" Class="py-3 flex-column h-100"
-                                   OnClick="@(() => Navigation.NavigateTo("/report-cards"))">
-                            <MudIcon Icon="@Icons.Material.Filled.Assessment" Size="Size.Large" Class="mb-1" />
-                            <MudText Typo="Typo.body2">Report Cards</MudText>
-                        </MudButton>
-                    </MudItem>
-                    <MudItem xs="6" sm="4">
-                        <MudButton Variant="Variant.Outlined" Color="Color.Success" FullWidth="true" Class="py-3 flex-column h-100"
-                                   OnClick="@(() => Navigation.NavigateTo("/whatsapp"))">
-                            <MudIcon Icon="@Icons.Custom.Brands.WhatsApp" Size="Size.Large" Class="mb-1" />
-                            <MudText Typo="Typo.body2">WhatsApp Parent</MudText>
-                        </MudButton>
-                    </MudItem>
-                    <MudItem xs="6" sm="4">
-                        <MudButton Variant="Variant.Outlined" Color="Color.Dark" FullWidth="true" Class="py-3 flex-column h-100"
-                                   OnClick="@(() => Navigation.NavigateTo("/batches"))">
-                            <MudIcon Icon="@Icons.Material.Filled.Class" Size="Size.Large" Class="mb-1" />
-                            <MudText Typo="Typo.body2">Manage Batches</MudText>
-                        </MudButton>
-                    </MudItem>
-                </MudGrid>
-            </MudCard>
+            <div class="pa-5 rounded-xl h-100"
+                 style="background-color: var(--color-surface); border: 1px solid var(--color-rule); box-shadow: var(--shadow-sm); border-radius: 16px;">
+                <div class="d-flex justify-space-between align-center mb-4">
+                    <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--color-ink); margin: 0;">
+                        Quick operations
+                    </h2>
+                    <span style="font-size: 0.78rem; color: var(--color-ink-muted);">Frequent tasks</span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+                    <!-- Student Records -->
+                    <div class="pa-3 rounded-lg cursor-pointer card-hover-subtle"
+                         style="border: 1px solid var(--color-rule); background-color: var(--color-paper-subtle); border-radius: 12px;"
+                         @onclick="@(() => Navigation.NavigateTo("/students"))">
+                        <div class="d-flex align-center gap-3">
+                            <div style="width: 38px; height: 38px; border-radius: 10px; background-color: var(--color-primary-soft); display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Outlined.Badge" Style="color: var(--color-primary); font-size: 20px;" />
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.88rem; color: var(--color-ink);">Students</div>
+                                <div style="font-size: 0.74rem; color: var(--color-ink-muted);">Directory & profiles</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bulk Marks -->
+                    <div class="pa-3 rounded-lg cursor-pointer card-hover-subtle"
+                         style="border: 1px solid var(--color-rule); background-color: var(--color-paper-subtle); border-radius: 12px;"
+                         @onclick="@(() => Navigation.NavigateTo("/marks/bulk-entry"))">
+                        <div class="d-flex align-center gap-3">
+                            <div style="width: 38px; height: 38px; border-radius: 10px; background-color: var(--color-success-soft); display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Outlined.FormatListNumbered" Style="color: var(--color-success); font-size: 20px;" />
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.88rem; color: var(--color-ink);">Enter marks</div>
+                                <div style="font-size: 0.74rem; color: var(--color-ink-muted);">Bulk test scores</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fee Payments -->
+                    <div class="pa-3 rounded-lg cursor-pointer card-hover-subtle"
+                         style="border: 1px solid var(--color-rule); background-color: var(--color-paper-subtle); border-radius: 12px;"
+                         @onclick="@(() => Navigation.NavigateTo("/fees"))">
+                        <div class="d-flex align-center gap-3">
+                            <div style="width: 38px; height: 38px; border-radius: 10px; background-color: var(--color-info-soft); display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Outlined.ReceiptLong" Style="color: var(--color-info); font-size: 20px;" />
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.88rem; color: var(--color-ink);">Fee payments</div>
+                                <div style="font-size: 0.74rem; color: var(--color-ink-muted);">Receipts & dues</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Report Cards -->
+                    <div class="pa-3 rounded-lg cursor-pointer card-hover-subtle"
+                         style="border: 1px solid var(--color-rule); background-color: var(--color-paper-subtle); border-radius: 12px;"
+                         @onclick="@(() => Navigation.NavigateTo("/report-cards"))">
+                        <div class="d-flex align-center gap-3">
+                            <div style="width: 38px; height: 38px; border-radius: 10px; background-color: var(--color-secondary-soft); display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Outlined.Description" Style="color: var(--color-secondary); font-size: 20px;" />
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.88rem; color: var(--color-ink);">Report cards</div>
+                                <div style="font-size: 0.74rem; color: var(--color-ink-muted);">Performance sheets</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- WhatsApp Dispatch -->
+                    <div class="pa-3 rounded-lg cursor-pointer card-hover-subtle"
+                         style="border: 1px solid var(--color-rule); background-color: var(--color-paper-subtle); border-radius: 12px;"
+                         @onclick="@(() => Navigation.NavigateTo("/whatsapp"))">
+                        <div class="d-flex align-center gap-3">
+                            <div style="width: 38px; height: 38px; border-radius: 10px; background-color: var(--color-success-soft); display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Custom.Brands.WhatsApp" Style="color: var(--color-success); font-size: 20px;" />
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.88rem; color: var(--color-ink);">WhatsApp</div>
+                                <div style="font-size: 0.74rem; color: var(--color-ink-muted);">Notify parents</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Class Batches -->
+                    <div class="pa-3 rounded-lg cursor-pointer card-hover-subtle"
+                         style="border: 1px solid var(--color-rule); background-color: var(--color-paper-subtle); border-radius: 12px;"
+                         @onclick="@(() => Navigation.NavigateTo("/batches"))">
+                        <div class="d-flex align-center gap-3">
+                            <div style="width: 38px; height: 38px; border-radius: 10px; background-color: var(--color-warning-soft); display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Outlined.Groups" Style="color: var(--color-warning); font-size: 20px;" />
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.88rem; color: var(--color-ink);">Batches</div>
+                                <div style="font-size: 0.74rem; color: var(--color-ink-muted);">Timings & tutors</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </MudItem>
 
-        <!-- Upcoming Tests / School Exams -->
+        <!-- Upcoming Tests / Assessments -->
         <MudItem xs="12" md="5">
-            <MudCard Elevation="2" Class="pa-4 rounded-xl h-100">
+            <div class="pa-5 rounded-xl h-100"
+                 style="background-color: var(--color-surface); border: 1px solid var(--color-rule); box-shadow: var(--shadow-sm); border-radius: 16px;">
                 <div class="d-flex justify-space-between align-center mb-3">
-                    <MudText Typo="Typo.h6" Class="fw-bold">Upcoming Assessments</MudText>
-                    <MudButton Size="Size.Small" Color="Color.Primary" OnClick="@(() => Navigation.NavigateTo("/assessments"))">
-                        View All
+                    <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--color-ink); margin: 0;">
+                        Upcoming assessments
+                    </h2>
+                    <MudButton Size="Size.Small"
+                               Variant="Variant.Text"
+                               Color="Color.Primary"
+                               OnClick="@(() => Navigation.NavigateTo("/assessments"))"
+                               Style="text-transform: none; font-weight: 600;">
+                        View all
                     </MudButton>
                 </div>
 
                 @if (_stats.UpcomingAssessments?.Any() == true)
                 {
-                    <MudList T="UpcomingAssessmentDto" Dense="true">
+                    <div class="d-flex flex-column gap-2">
                         @foreach (var test in _stats.UpcomingAssessments)
                         {
-                            <MudListItem Icon="@Icons.Material.Filled.EventNote" IconColor="Color.Primary">
-                                <div class="d-flex justify-space-between align-center">
-                                    <div>
-                                        <MudText Typo="Typo.subtitle2" Class="fw-bold">@test.Name</MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                            @test.GradeName • @test.SubjectCount Subjects
-                                        </MudText>
+                            <div class="pa-3 rounded-lg d-flex justify-space-between align-center"
+                                 style="background-color: var(--color-paper-subtle); border: 1px solid var(--color-rule); border-radius: 10px;">
+                                <div class="d-flex align-center gap-3">
+                                    <div style="width: 34px; height: 34px; border-radius: 8px; background-color: var(--color-primary-soft); display: flex; align-items: center; justify-content: center;">
+                                        <MudIcon Icon="@Icons.Material.Outlined.EventNote" Style="color: var(--color-primary); font-size: 18px;" />
                                     </div>
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
-                                        @test.Date.ToString("MMM dd")
-                                    </MudChip>
+                                    <div>
+                                        <div style="font-weight: 600; font-size: 0.86rem; color: var(--color-ink);">@test.Name</div>
+                                        <div style="font-size: 0.74rem; color: var(--color-ink-muted);">
+                                            @test.GradeName • @test.SubjectCount subjects
+                                        </div>
+                                    </div>
                                 </div>
-                            </MudListItem>
-                            <MudDivider />
+                                <span class="adorable-badge adorable-badge-primary" style="font-size: 0.72rem; padding: 2px 8px;">
+                                    @test.Date.ToString("MMM dd")
+                                </span>
+                            </div>
                         }
-                    </MudList>
+                    </div>
                 }
                 else
                 {
                     <div class="pa-6 text-center">
-                        <MudIcon Icon="@Icons.Material.Filled.EventAvailable" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">No upcoming assessments scheduled.</MudText>
-                        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Class="mt-2" OnClick="@(() => Navigation.NavigateTo("/assessments"))">
-                            Schedule a Test
+                        <div class="mx-auto mb-2" style="width: 48px; height: 48px; border-radius: 50%; background-color: var(--color-paper-subtle); display: flex; align-items: center; justify-content: center;">
+                            <MudIcon Icon="@Icons.Material.Outlined.EventAvailable" Style="color: var(--color-ink-muted); font-size: 24px;" />
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--color-ink-muted); margin: 0;">No upcoming assessments scheduled</p>
+                        <MudButton Variant="Variant.Text"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   Class="mt-2"
+                                   OnClick="@(() => Navigation.NavigateTo("/assessments"))"
+                                   Style="text-transform: none; font-weight: 600;">
+                            Schedule a test
                         </MudButton>
                     </div>
                 }
-            </MudCard>
+            </div>
         </MudItem>
     </MudGrid>
 }

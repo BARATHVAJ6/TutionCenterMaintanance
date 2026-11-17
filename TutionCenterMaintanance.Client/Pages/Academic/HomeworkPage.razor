@@ -441,7 +441,7 @@
         if (cleanPhone.Length == 10) cleanPhone = "91" + cleanPhone;
 
         var hw = _detailModel.Homework;
-        var message = $"Dear {sub.ParentName},\n\nHomework Update for {sub.StudentName} ({hw.BatchName}):\nSubject: {hw.SubjectName}\nTask: {hw.Title}\nStatus: {sub.Status}\nDue Date: {hw.DueDate:dd-MMM-yyyy}\nRemarks: {sub.Remarks ?? "Please ensure timely completion."}\n\nBright Minds Tuition Center";
+        var message = $"Dear {sub.ParentName},\n\nHomework Update for {sub.StudentName} ({hw.BatchName}):\nSubject: {hw.SubjectName}\nTask: {hw.Title}\nStatus: {sub.Status}\nDue Date: {hw.DueDate:dd-MMM-yyyy}\nRemarks: {sub.Remarks ?? "Please ensure timely completion."}\n\nSai Tuition Center";
 
         var encoded = Uri.EscapeDataString(message);
         var url = $"https://wa.me/{cleanPhone}?text={encoded}";

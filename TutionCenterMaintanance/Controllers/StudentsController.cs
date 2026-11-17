@@ -62,14 +62,18 @@ public class StudentsController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var s = search.Trim().ToLower();
+            var s = search.Trim();
+            var pattern = $"%{s}%";
             query = query.Where(st =>
-                st.FirstName.ToLower().Contains(s) ||
-                st.LastName.ToLower().Contains(s) ||
-                st.SchoolName.ToLower().Contains(s) ||
-                st.Parent.FatherName.ToLower().Contains(s) ||
-                st.Parent.FatherPhone.Contains(s) ||
-                (st.Parent.MotherPhone != null && st.Parent.MotherPhone.Contains(s))
+                EF.Functions.Like(st.FirstName, pattern) ||
+                EF.Functions.Like(st.LastName, pattern) ||
+                EF.Functions.Like(st.SchoolName, pattern) ||
+                (st.Parent != null && (
+                    EF.Functions.Like(st.Parent.FatherName, pattern) ||
+                    EF.Functions.Like(st.Parent.FatherPhone, pattern) ||
+                    (st.Parent.MotherName != null && EF.Functions.Like(st.Parent.MotherName, pattern)) ||
+                    (st.Parent.MotherPhone != null && EF.Functions.Like(st.Parent.MotherPhone, pattern))
+                ))
             );
         }
 
@@ -87,11 +91,13 @@ public class StudentsController : ControllerBase
                 GradeName = s.Grade.Name,
                 BoardName = s.Board.Name,
                 SchoolName = s.SchoolName,
-                FatherName = s.Parent.FatherName,
-                PrimaryPhone = s.Parent.FatherPhone,
-                WhatsAppPhone = !string.IsNullOrEmpty(s.Parent.FatherWhatsApp) ? s.Parent.FatherWhatsApp : s.Parent.FatherPhone,
+                FatherName = !string.IsNullOrWhiteSpace(s.Parent.FatherName) ? s.Parent.FatherName : (s.Parent.MotherName ?? ""),
+                PrimaryPhone = !string.IsNullOrWhiteSpace(s.Parent.FatherPhone) ? s.Parent.FatherPhone : (s.Parent.MotherPhone ?? ""),
+                WhatsAppPhone = !string.IsNullOrEmpty(s.Parent.FatherWhatsApp) ? s.Parent.FatherWhatsApp :
+                                (!string.IsNullOrWhiteSpace(s.Parent.FatherPhone) ? s.Parent.FatherPhone : (s.Parent.MotherPhone ?? "")),
                 IsActive = s.IsActive,
                 PhotoUrl = s.PhotoUrl,
+                MonthlyFeeAmount = s.MonthlyFeeAmount,
                 BatchNames = s.StudentBatches.Select(sb => sb.Batch.Name).ToList()
             })
             .ToListAsync();
@@ -139,6 +145,7 @@ public class StudentsController : ControllerBase
             BloodGroup = s.BloodGroup,
             MedicalNotes = s.MedicalNotes,
             PreviousRecords = s.PreviousRecords,
+            MonthlyFeeAmount = s.MonthlyFeeAmount,
             IsActive = s.IsActive,
             BatchIds = s.StudentBatches.Select(sb => sb.BatchId).ToList(),
             BatchNames = s.StudentBatches.Select(sb => sb.Batch.Name).ToList(),
@@ -176,13 +183,14 @@ public class StudentsController : ControllerBase
             BloodGroup = request.BloodGroup,
             MedicalNotes = request.MedicalNotes,
             PreviousRecords = request.PreviousRecords,
+            MonthlyFeeAmount = request.MonthlyFeeAmount,
             PhotoUrl = request.PhotoBase64,
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
             Parent = new ParentInfo
             {
-                FatherName = request.Parent.FatherName,
-                FatherPhone = request.Parent.FatherPhone,
+                FatherName = request.Parent.FatherName ?? string.Empty,
+                FatherPhone = request.Parent.FatherPhone ?? string.Empty,
                 FatherWhatsApp = request.Parent.FatherWhatsApp,
                 MotherName = request.Parent.MotherName,
                 MotherPhone = request.Parent.MotherPhone,
@@ -235,6 +243,7 @@ public class StudentsController : ControllerBase
         student.BloodGroup = request.BloodGroup;
         student.MedicalNotes = request.MedicalNotes;
         student.PreviousRecords = request.PreviousRecords;
+        student.MonthlyFeeAmount = request.MonthlyFeeAmount;
         student.IsActive = request.IsActive;
         student.ModifiedAt = DateTime.UtcNow;
 
@@ -244,8 +253,8 @@ public class StudentsController : ControllerBase
         }
 
         // Update Parent info
-        student.Parent.FatherName = request.Parent.FatherName;
-        student.Parent.FatherPhone = request.Parent.FatherPhone;
+        student.Parent.FatherName = request.Parent.FatherName ?? string.Empty;
+        student.Parent.FatherPhone = request.Parent.FatherPhone ?? string.Empty;
         student.Parent.FatherWhatsApp = request.Parent.FatherWhatsApp;
         student.Parent.MotherName = request.Parent.MotherName;
         student.Parent.MotherPhone = request.Parent.MotherPhone;

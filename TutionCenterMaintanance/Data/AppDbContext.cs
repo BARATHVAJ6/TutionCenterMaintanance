@@ -26,11 +26,11 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, string>
     public DbSet<Assessment> Assessments => Set<Assessment>();
     public DbSet<AssessmentSubject> AssessmentSubjects => Set<AssessmentSubject>();
     public DbSet<Mark> Marks => Set<Mark>();
-    public DbSet<FeePlan> FeePlans => Set<FeePlan>();
-    public DbSet<Discount> Discounts => Set<Discount>();
-    public DbSet<StudentFeePlan> StudentFeePlans => Set<StudentFeePlan>();
-    public DbSet<FeeInstallment> FeeInstallments => Set<FeeInstallment>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<Expense> Expenses => Set<Expense>();
+    public DbSet<StationeryItem> StationeryItems => Set<StationeryItem>();
+    public DbSet<StationeryPurchase> StationeryPurchases => Set<StationeryPurchase>();
+    public DbSet<StationerySale> StationerySales => Set<StationerySale>();
     public DbSet<Timetable> Timetables => Set<Timetable>();
     public DbSet<Homework> Homeworks => Set<Homework>();
     public DbSet<HomeworkSubmission> HomeworkSubmissions => Set<HomeworkSubmission>();
@@ -61,11 +61,11 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, string>
         builder.Entity<Assessment>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<AssessmentSubject>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<Mark>().HasQueryFilter(e => !e.IsDeleted);
-        builder.Entity<FeePlan>().HasQueryFilter(e => !e.IsDeleted);
-        builder.Entity<Discount>().HasQueryFilter(e => !e.IsDeleted);
-        builder.Entity<StudentFeePlan>().HasQueryFilter(e => !e.IsDeleted);
-        builder.Entity<FeeInstallment>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<Payment>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<Expense>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<StationeryItem>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<StationeryPurchase>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<StationerySale>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<Timetable>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<Homework>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<HomeworkSubmission>().HasQueryFilter(e => !e.IsDeleted);
@@ -103,21 +103,22 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, string>
             property.SetScale(2);
         }
 
-        // Seed default Grades (UKG to Grade 12)
+        // Seed default Grades (LKG, UKG to 12th Std)
         builder.Entity<Grade>().HasData(
+            new Grade { Id = 14, Name = "LKG", OrderIndex = -1, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
             new Grade { Id = 1, Name = "UKG", OrderIndex = 0, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-            new Grade { Id = 2, Name = "Grade 1", OrderIndex = 1, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-            new Grade { Id = 3, Name = "Grade 2", OrderIndex = 2, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-            new Grade { Id = 4, Name = "Grade 3", OrderIndex = 3, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-            new Grade { Id = 5, Name = "Grade 4", OrderIndex = 4, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-            new Grade { Id = 6, Name = "Grade 5", OrderIndex = 5, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-            new Grade { Id = 7, Name = "Grade 6", OrderIndex = 6, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-            new Grade { Id = 8, Name = "Grade 7", OrderIndex = 7, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-            new Grade { Id = 9, Name = "Grade 8", OrderIndex = 8, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-            new Grade { Id = 10, Name = "Grade 9", OrderIndex = 9, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-            new Grade { Id = 11, Name = "Grade 10", OrderIndex = 10, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-            new Grade { Id = 12, Name = "Grade 11", OrderIndex = 11, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
-            new Grade { Id = 13, Name = "Grade 12", OrderIndex = 12, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) }
+            new Grade { Id = 2, Name = "1st Std", OrderIndex = 1, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Grade { Id = 3, Name = "2nd Std", OrderIndex = 2, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Grade { Id = 4, Name = "3rd Std", OrderIndex = 3, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Grade { Id = 5, Name = "4th Std", OrderIndex = 4, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Grade { Id = 6, Name = "5th Std", OrderIndex = 5, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Grade { Id = 7, Name = "6th Std", OrderIndex = 6, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Grade { Id = 8, Name = "7th Std", OrderIndex = 7, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Grade { Id = 9, Name = "8th Std", OrderIndex = 8, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Grade { Id = 10, Name = "9th Std", OrderIndex = 9, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Grade { Id = 11, Name = "10th Std", OrderIndex = 10, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Grade { Id = 12, Name = "11th Std", OrderIndex = 11, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+            new Grade { Id = 13, Name = "12th Std", OrderIndex = 12, CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) }
         );
 
         // Seed default CenterSettings
@@ -125,7 +126,7 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, string>
             new CenterSettings
             {
                 Id = 1,
-                CenterName = "Bright Minds Tuition Center",
+                CenterName = "Sai Tuition Center",
                 Tagline = "Excellence in Learning from UKG to Grade 12",
                 Address = "123 Education Lane, Knowledge City",
                 Phone = "+91 98765 43210",

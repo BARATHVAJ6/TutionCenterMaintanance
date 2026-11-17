@@ -12,22 +12,22 @@
     "semantic_hash": "1f84ae1afd98aea56ea7cfd3822fd936"
   },
   "TutionCenterMaintanance.Client/Layout/MainLayout.razor": {
-    "mtime": 1793340528.3342273,
-    "seen": 1794850942.9878752,
-    "ast_hash": "1f624b4016b27f5507670634a1d31ed6",
-    "semantic_hash": "1f624b4016b27f5507670634a1d31ed6"
+    "mtime": 1794906514.453565,
+    "seen": 1794906713.1006622,
+    "ast_hash": "640bb4547a2a64f42b3dc329612c178d",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Client/Layout/NavMenu.razor": {
-    "mtime": 1793342217.2977202,
-    "seen": 1794850942.987876,
-    "ast_hash": "20ff28486be9883fc645e754651ff4b5",
-    "semantic_hash": "20ff28486be9883fc645e754651ff4b5"
+    "mtime": 1794933632.0282135,
+    "seen": 1794934381.3146627,
+    "ast_hash": "c793d75b91d61a1c3f80a7bc1ed28bc4",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Client/Pages/Academic/AcademicConfigPage.razor": {
-    "mtime": 1793116565.4831078,
-    "seen": 1794850942.9878767,
-    "ast_hash": "77677d5931d80fde696ed5a011b674da",
-    "semantic_hash": "77677d5931d80fde696ed5a011b674da"
+    "mtime": 1794907561.2574031,
+    "seen": 1794907671.735897,
+    "ast_hash": "2700f91d266985ae8fcbd49f8d581932",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Client/Pages/Academic/BatchesPage.razor": {
     "mtime": 1793116877.1456351,
@@ -36,10 +36,10 @@
     "semantic_hash": "8af5944e7dba4e322e1e3006d5d952eb"
   },
   "TutionCenterMaintanance.Client/Pages/Academic/HomeworkPage.razor": {
-    "mtime": 1793341966.480358,
-    "seen": 1794850942.9878778,
-    "ast_hash": "4a7be66e5ab5c2c95aa25ad084a65ee9",
-    "semantic_hash": "4a7be66e5ab5c2c95aa25ad084a65ee9"
+    "mtime": 1794906561.8681016,
+    "seen": 1794906713.1006672,
+    "ast_hash": "5478aa53483cbe760b562403ac414405",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Client/Pages/Academic/TeachersPage.razor": {
     "mtime": 1793116887.2439616,
@@ -60,10 +60,10 @@
     "semantic_hash": "43a05651e56017d28ca95bc9ff0c19e7"
   },
   "TutionCenterMaintanance.Client/Pages/Administration/DataManagementPage.razor": {
-    "mtime": 1793342034.2832322,
-    "seen": 1794850942.9878805,
-    "ast_hash": "9a50bf45980b27f028fcd564b196d4e9",
-    "semantic_hash": "9a50bf45980b27f028fcd564b196d4e9"
+    "mtime": 1794907585.7896152,
+    "seen": 1794907671.7359035,
+    "ast_hash": "34fac02dee40f54a1eae58634715fca0",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Client/Pages/Attendance/AttendancePage.razor": {
     "mtime": 1793116724.9906235,
@@ -72,16 +72,16 @@
     "semantic_hash": "d63ed474374b88feef79aad63ec9cc7a"
   },
   "TutionCenterMaintanance.Client/Pages/Auth/Login.razor": {
-    "mtime": 1793116214.4713948,
-    "seen": 1794850942.9878817,
-    "ast_hash": "6c91dac82e6cfac3c7249426bccfd2cb",
-    "semantic_hash": "6c91dac82e6cfac3c7249426bccfd2cb"
+    "mtime": 1794906528.57004,
+    "seen": 1794906713.1006715,
+    "ast_hash": "7a7f5b903065bece230072262c398c09",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Client/Pages/Communication/WhatsAppQuickMessage.razor": {
-    "mtime": 1793340830.0731082,
-    "seen": 1794850942.9878829,
-    "ast_hash": "ff0853d428b9dd02af516a80bc922c51",
-    "semantic_hash": "ff0853d428b9dd02af516a80bc922c51"
+    "mtime": 1794907572.9227002,
+    "seen": 1794907671.7359068,
+    "ast_hash": "1a9a41fc4e4961a0b35191da4ccf38b0",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Client/Pages/Counter.razor": {
     "mtime": 1793032985.6096938,
@@ -89,17 +89,11 @@
     "ast_hash": "32c8ca0737f51544273734b916425e98",
     "semantic_hash": "32c8ca0737f51544273734b916425e98"
   },
-  "TutionCenterMaintanance.Client/Pages/Fees/FeePlansPage.razor": {
-    "mtime": 1793116514.837692,
-    "seen": 1794850942.987884,
-    "ast_hash": "9b2c9e338adc9ab2b8734d24fc700088",
-    "semantic_hash": "9b2c9e338adc9ab2b8734d24fc700088"
-  },
   "TutionCenterMaintanance.Client/Pages/Fees/FeesPage.razor": {
-    "mtime": 1793340601.703346,
-    "seen": 1794850942.9878845,
-    "ast_hash": "fa7e3317fbbbc8dcb5594f997b434eb6",
-    "semantic_hash": "fa7e3317fbbbc8dcb5594f997b434eb6"
+    "mtime": 1794933796.4520981,
+    "seen": 1794934381.314675,
+    "ast_hash": "8160f6173762361e52efa447bfa5bfd9",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Client/Pages/Fees/PaymentReceiptDialog.razor": {
     "mtime": 1793340630.3996458,
@@ -108,22 +102,22 @@
     "semantic_hash": "772440612ebca9a78ce6fb2cee745fd4"
   },
   "TutionCenterMaintanance.Client/Pages/Fees/RecordPaymentDialog.razor": {
-    "mtime": 1793340543.73131,
-    "seen": 1794850942.9878857,
-    "ast_hash": "5c16602abfe79ae39f403e8db1b50ec5",
-    "semantic_hash": "5c16602abfe79ae39f403e8db1b50ec5"
+    "mtime": 1794933361.001931,
+    "seen": 1794934381.314677,
+    "ast_hash": "115d11280f7035984ecdbcaf4b4041bc",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Client/Pages/Fees/StudentLedgerDialog.razor": {
-    "mtime": 1793340613.6494439,
-    "seen": 1794850942.9878864,
-    "ast_hash": "042615921375ca78349a2607c7eb2b73",
-    "semantic_hash": "042615921375ca78349a2607c7eb2b73"
+    "mtime": 1794933784.053726,
+    "seen": 1794934381.3146796,
+    "ast_hash": "2ba6248f15232ac5647975ec247ee097",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Client/Pages/Home.razor": {
-    "mtime": 1793116248.5959156,
-    "seen": 1794850942.9878876,
-    "ast_hash": "76105289116782bffe5347575dfed25c",
-    "semantic_hash": "76105289116782bffe5347575dfed25c"
+    "mtime": 1794933705.3400142,
+    "seen": 1794934381.3146844,
+    "ast_hash": "1a5f513c64dd035f28f3ed344cdb0abd",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Client/Pages/Marks/AssessmentsPage.razor": {
     "mtime": 1793116363.7515788,
@@ -144,10 +138,10 @@
     "semantic_hash": "02e04cdabe75b6d77e519d442eb7196b"
   },
   "TutionCenterMaintanance.Client/Pages/Marks/ReportCardPage.razor": {
-    "mtime": 1793116448.3362074,
-    "seen": 1794850942.9878902,
-    "ast_hash": "ee444407459c6cb4c7ab48a4bdb16acc",
-    "semantic_hash": "ee444407459c6cb4c7ab48a4bdb16acc"
+    "mtime": 1794906583.9522412,
+    "seen": 1794906713.10068,
+    "ast_hash": "7691ae4e7380d1b8c0d7192b4494e2eb",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Client/Pages/NotFound.razor": {
     "mtime": 1793032984.626459,
@@ -156,10 +150,10 @@
     "semantic_hash": "b43132764687de5710f24e46d3d3f7ff"
   },
   "TutionCenterMaintanance.Client/Pages/Reports/ReportsPage.razor": {
-    "mtime": 1793342002.770599,
-    "seen": 1794850942.9878912,
-    "ast_hash": "fca20e60c308d924efd57415dab52e4b",
-    "semantic_hash": "fca20e60c308d924efd57415dab52e4b"
+    "mtime": 1794907579.0407312,
+    "seen": 1794907671.7359178,
+    "ast_hash": "80c89af743debfd9ec380b66386af694",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Client/Pages/Settings/CenterSettingsPage.razor": {
     "mtime": 1793116623.5662591,
@@ -168,22 +162,22 @@
     "semantic_hash": "073b3aa3ed9decc17b631e9cd175eab3"
   },
   "TutionCenterMaintanance.Client/Pages/Settings/UserManagementPage.razor": {
-    "mtime": 1793116649.3577886,
-    "seen": 1794850942.9878926,
-    "ast_hash": "5fed146277e18cf5ac8c4b47b034d094",
-    "semantic_hash": "5fed146277e18cf5ac8c4b47b034d094"
+    "mtime": 1794907591.677339,
+    "seen": 1794907671.735919,
+    "ast_hash": "7eba5fe522b23eaec50a92584420e293",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Client/Pages/Students/StudentDialog.razor": {
-    "mtime": 1793116275.0791447,
-    "seen": 1794850942.9878933,
-    "ast_hash": "c502604c7f877dcaf90536035d26a8ce",
-    "semantic_hash": "c502604c7f877dcaf90536035d26a8ce"
+    "mtime": 1794905814.8209243,
+    "seen": 1794905837.1728618,
+    "ast_hash": "0c6824146abd90d973debf4b909cb3ce",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Client/Pages/Students/StudentList.razor": {
-    "mtime": 1793116868.342496,
-    "seen": 1794850942.9878943,
-    "ast_hash": "d592084467072a9527d4b33640df0a0a",
-    "semantic_hash": "d592084467072a9527d4b33640df0a0a"
+    "mtime": 1794906556.1907468,
+    "seen": 1794906713.1006846,
+    "ast_hash": "1c2fa4d2e8115aa68a4a420bd4ef3114",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Client/Pages/Weather.razor": {
     "mtime": 1793032984.6550534,
@@ -204,22 +198,22 @@
     "semantic_hash": "04f8279974b011ab663f4370ab18f183"
   },
   "TutionCenterMaintanance.Client/Services/ApiService.cs": {
-    "mtime": 1793341827.0384617,
-    "seen": 1794850942.9878967,
-    "ast_hash": "7fa522a70cbc4e0713fab2fbbd8801ae",
-    "semantic_hash": "7fa522a70cbc4e0713fab2fbbd8801ae"
+    "mtime": 1794933203.4750183,
+    "seen": 1794934381.314697,
+    "ast_hash": "449e27521c7b5517b82f2be441bb5dc9",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Client/TutionCenterMaintanance.Client.csproj": {
-    "mtime": 1793115364.3525567,
-    "seen": 1794850942.9878974,
-    "ast_hash": "01ae7d37278bf6091e5c08dc8bc3a5ab",
-    "semantic_hash": "01ae7d37278bf6091e5c08dc8bc3a5ab"
+    "mtime": 1794900103.9256742,
+    "seen": 1794901847.6481276,
+    "ast_hash": "d9a0d02ee777cd96c958cf478714641e",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Client/_Imports.razor": {
-    "mtime": 1793341320.6077383,
-    "seen": 1794850942.9878979,
-    "ast_hash": "351cac71795c235cad787b7f11923242",
-    "semantic_hash": "351cac71795c235cad787b7f11923242"
+    "mtime": 1794933732.7257643,
+    "seen": 1794934381.3146985,
+    "ast_hash": "8303d35aca3e84d67cf5d6f769cda978",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Client/wwwroot/appsettings.Development.json": {
     "mtime": 1793032985.610729,
@@ -276,16 +270,16 @@
     "semantic_hash": "3f12efa35a430c54ac92d3e259760e01"
   },
   "TutionCenterMaintanance.Shared/DTOs/Dashboard/DashboardDtos.cs": {
-    "mtime": 1793115498.6905458,
-    "seen": 1794850942.987925,
-    "ast_hash": "8e2de673209f59ba803c568e5329925d",
-    "semantic_hash": "8e2de673209f59ba803c568e5329925d"
+    "mtime": 1794933111.9840975,
+    "seen": 1794934381.314706,
+    "ast_hash": "44262846fca329955b27385f95d53348",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Shared/DTOs/Fees/FeeDtos.cs": {
-    "mtime": 1793339780.1478522,
-    "seen": 1794850942.9879258,
-    "ast_hash": "d3c1ad82107e305a4f193df319c70403",
-    "semantic_hash": "d3c1ad82107e305a4f193df319c70403"
+    "mtime": 1794932989.893241,
+    "seen": 1794934381.3147078,
+    "ast_hash": "085725cf3f00c9fadb5a3b752197c80f",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Shared/DTOs/Homework/HomeworkDtos.cs": {
     "mtime": 1793341287.002553,
@@ -312,16 +306,16 @@
     "semantic_hash": "fa0080bfdb918a06174ee5eb35b598b4"
   },
   "TutionCenterMaintanance.Shared/DTOs/Settings/SettingsDtos.cs": {
-    "mtime": 1793115491.9040563,
-    "seen": 1794850942.987929,
-    "ast_hash": "94d100cb5ef9399f3fb0dbba8f8b391f",
-    "semantic_hash": "94d100cb5ef9399f3fb0dbba8f8b391f"
+    "mtime": 1794906588.9037223,
+    "seen": 1794906713.1007013,
+    "ast_hash": "65938feca2a5105233c351fbd1829f87",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Shared/DTOs/Students/StudentDtos.cs": {
-    "mtime": 1793115449.1103954,
-    "seen": 1794850942.9879296,
-    "ast_hash": "4594dd9349c65180756f234b70e10444",
-    "semantic_hash": "4594dd9349c65180756f234b70e10444"
+    "mtime": 1794932859.7116866,
+    "seen": 1794934381.314714,
+    "ast_hash": "f28de692575083655d2db6af8a56dbbb",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Shared/DTOs/Timetable/TimetableDtos.cs": {
     "mtime": 1793341276.163242,
@@ -330,10 +324,10 @@
     "semantic_hash": "7c1a40c9012a2417bee24156fb5db5cf"
   },
   "TutionCenterMaintanance.Shared/Enums/AppEnums.cs": {
-    "mtime": 1793115414.4462733,
-    "seen": 1794850942.9879315,
-    "ast_hash": "46c3e919499e51a669bfddbb2b31547b",
-    "semantic_hash": "46c3e919499e51a669bfddbb2b31547b"
+    "mtime": 1794932728.2611694,
+    "seen": 1794934381.3147154,
+    "ast_hash": "721fa6c46865794f9b01ca137472ddd4",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.Shared/Models/CommonModels.cs": {
     "mtime": 1793115428.8872056,
@@ -342,22 +336,22 @@
     "semantic_hash": "c0a76d337f329241da93f67826a71cbf"
   },
   "TutionCenterMaintanance.Shared/TutionCenterMaintanance.Shared.csproj": {
-    "mtime": 1793115219.0045784,
-    "seen": 1794850942.9879327,
-    "ast_hash": "46b0780bd56312ea2d1bab391f179e89",
-    "semantic_hash": "46b0780bd56312ea2d1bab391f179e89"
+    "mtime": 1794900103.8663592,
+    "seen": 1794901847.648149,
+    "ast_hash": "0d3689c27139747b080e6587dea1509b",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance.slnx": {
-    "mtime": 1793115222.514161,
-    "seen": 1794850942.9879372,
-    "ast_hash": "ec811ec56e40779103eaad4c2c580bea",
-    "semantic_hash": "ec811ec56e40779103eaad4c2c580bea"
+    "mtime": 1794854035.8384311,
+    "seen": 1794854095.7077587,
+    "ast_hash": "8b948444a6e6502b786b423858f41fc3",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance/Components/App.razor": {
-    "mtime": 1793342497.9698977,
-    "seen": 1794850942.9879382,
-    "ast_hash": "29e6c68792db0251538be40908db5e20",
-    "semantic_hash": "29e6c68792db0251538be40908db5e20"
+    "mtime": 1794853324.8458657,
+    "seen": 1794853610.6224885,
+    "ast_hash": "c5faa10951f24019715fb9796d3d47dd",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance/Components/Pages/Error.razor": {
     "mtime": 1793032984.6208417,
@@ -402,22 +396,22 @@
     "semantic_hash": "7f08b0d9ee4faaeab009b7eb46a64d4c"
   },
   "TutionCenterMaintanance/Controllers/BackupController.cs": {
-    "mtime": 1793341422.914451,
-    "seen": 1794850942.9879427,
-    "ast_hash": "40550b34d1474067643a95ba73a9d205",
-    "semantic_hash": "40550b34d1474067643a95ba73a9d205"
+    "mtime": 1794932812.306144,
+    "seen": 1794934381.3147235,
+    "ast_hash": "b868e5e62fa41ea5317e67cfd5a97687",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance/Controllers/DashboardController.cs": {
-    "mtime": 1793115789.1904206,
-    "seen": 1794850942.9879432,
-    "ast_hash": "935906794cf52218a63752e30aae8866",
-    "semantic_hash": "935906794cf52218a63752e30aae8866"
+    "mtime": 1794933134.700965,
+    "seen": 1794934381.3147244,
+    "ast_hash": "bc3f1e85516f7bfe977143e51df6ded4",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance/Controllers/FeesController.cs": {
-    "mtime": 1793340175.6070795,
-    "seen": 1794850942.9879436,
-    "ast_hash": "d3a955bea4721e405175f96dfd8f6195",
-    "semantic_hash": "d3a955bea4721e405175f96dfd8f6195"
+    "mtime": 1794933040.3294392,
+    "seen": 1794934381.3147256,
+    "ast_hash": "3a2189229fcd3fce61f3585dae61bc96",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance/Controllers/HomeworkController.cs": {
     "mtime": 1793341697.5133681,
@@ -438,10 +432,10 @@
     "semantic_hash": "48201d6e3fa89ef7ee3fa32cc6a076a5"
   },
   "TutionCenterMaintanance/Controllers/NotificationsController.cs": {
-    "mtime": 1793339949.0733254,
-    "seen": 1794850942.987946,
-    "ast_hash": "d8b56d1651729f8efdcb045628d2100a",
-    "semantic_hash": "d8b56d1651729f8efdcb045628d2100a"
+    "mtime": 1794933321.542627,
+    "seen": 1794934381.3147295,
+    "ast_hash": "0c0ea9f2bcff90e2b7375311c40005ef",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance/Controllers/ReportsController.cs": {
     "mtime": 1793341798.3086083,
@@ -450,10 +444,10 @@
     "semantic_hash": "9006a5ebdb29aaa90bbf9fd65f9c56b9"
   },
   "TutionCenterMaintanance/Controllers/StudentsController.cs": {
-    "mtime": 1793115707.4418852,
-    "seen": 1794850942.987947,
-    "ast_hash": "260e5e654ebb7f7c748b80844675bf24",
-    "semantic_hash": "260e5e654ebb7f7c748b80844675bf24"
+    "mtime": 1794932940.8055947,
+    "seen": 1794934381.3147318,
+    "ast_hash": "34636c4690811a4b0b9c71fbf3f1fe0a",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance/Controllers/TimetableController.cs": {
     "mtime": 1793341642.9581535,
@@ -462,22 +456,22 @@
     "semantic_hash": "fe195b471384b6bda93066706cbb5364"
   },
   "TutionCenterMaintanance/Controllers/WhatsAppController.cs": {
-    "mtime": 1793340896.5617125,
-    "seen": 1794850942.9879482,
-    "ast_hash": "8c1dd4026e8e3bf733a941c740d16210",
-    "semantic_hash": "8c1dd4026e8e3bf733a941c740d16210"
+    "mtime": 1794933306.2974167,
+    "seen": 1794934381.314733,
+    "ast_hash": "35fb8536c5cef787ccd1580e48574b9a",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance/Data/AppDbContext.cs": {
-    "mtime": 1793339849.221738,
-    "seen": 1794850942.9879491,
-    "ast_hash": "3b66aed7f6ef68948955ed0bd7134dab",
-    "semantic_hash": "3b66aed7f6ef68948955ed0bd7134dab"
+    "mtime": 1794932787.3423455,
+    "seen": 1794934381.314734,
+    "ast_hash": "bc3253e6cf8df231646b5c00e4dda4e9",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance/Data/Entities/AcademicEntities.cs": {
-    "mtime": 1793115534.8942428,
-    "seen": 1794850942.9879498,
-    "ast_hash": "d65c2a9903dfd883c816d66acc38bbff",
-    "semantic_hash": "d65c2a9903dfd883c816d66acc38bbff"
+    "mtime": 1794933263.0517242,
+    "seen": 1794934381.3147347,
+    "ast_hash": "1f2792c676a17a37d8b0b4712a123169",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance/Data/Entities/AssessmentEntities.cs": {
     "mtime": 1793115553.9779801,
@@ -492,10 +486,10 @@
     "semantic_hash": "82dd468a6ee8cb711be6b8ca49f84bc3"
   },
   "TutionCenterMaintanance/Data/Entities/FeeEntities.cs": {
-    "mtime": 1793339808.9002395,
-    "seen": 1794850942.9879515,
-    "ast_hash": "7413321ce6d60475cc67d902d86ce249",
-    "semantic_hash": "7413321ce6d60475cc67d902d86ce249"
+    "mtime": 1794932749.4154353,
+    "seen": 1794934381.314738,
+    "ast_hash": "cf34c9bb349cda266a7ed6c7c3d26139",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance/Data/Entities/IdentityEntities.cs": {
     "mtime": 1793115524.1778653,
@@ -504,22 +498,22 @@
     "semantic_hash": "390295e3f8af08a4c681f6bbde25c836"
   },
   "TutionCenterMaintanance/Data/Entities/OtherEntities.cs": {
-    "mtime": 1793339821.343767,
-    "seen": 1794850942.987953,
-    "ast_hash": "d87537c92b5509eeeceeedbc737e1241",
-    "semantic_hash": "d87537c92b5509eeeceeedbc737e1241"
+    "mtime": 1794906604.2560704,
+    "seen": 1794906713.100725,
+    "ast_hash": "2c7fffeeb271fad2ce5de138b2006844",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance/Data/Entities/StudentEntities.cs": {
-    "mtime": 1793115546.660938,
-    "seen": 1794850942.9879534,
-    "ast_hash": "e3f3eab4b76db274e6804772d0ab21cd",
-    "semantic_hash": "e3f3eab4b76db274e6804772d0ab21cd"
+    "mtime": 1794932741.658067,
+    "seen": 1794934381.3147407,
+    "ast_hash": "fb51d08a182c67de1a8d3a8541e7da74",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance/Data/SeedData.cs": {
-    "mtime": 1794848939.1997132,
-    "seen": 1794850942.9879541,
-    "ast_hash": "e139601f0345cf870c53199dfb9072a2",
-    "semantic_hash": "e139601f0345cf870c53199dfb9072a2"
+    "mtime": 1794933287.3361504,
+    "seen": 1794934381.3147416,
+    "ast_hash": "ec8fcfa0a8ef8d8e7489ba06c40b8591",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance/Infrastructure/PermissionAuthorization.cs": {
     "mtime": 1793115629.8914213,
@@ -558,10 +552,10 @@
     "semantic_hash": "f1632a04ca0b81d793a2c1f70566d9d0"
   },
   "TutionCenterMaintanance/Program.cs": {
-    "mtime": 1794848934.2176578,
-    "seen": 1794850942.9879582,
-    "ast_hash": "c1b6b539a8f0867e55de4ef02a3b7479",
-    "semantic_hash": "c1b6b539a8f0867e55de4ef02a3b7479"
+    "mtime": 1794854075.8729715,
+    "seen": 1794854095.7077968,
+    "ast_hash": "c71b4ac11afe5ef6badc61437313d5df",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance/Properties/launchSettings.json": {
     "mtime": 1793032984.6669796,
@@ -576,10 +570,10 @@
     "semantic_hash": "99ae42c201923b3393997268cc06b331"
   },
   "TutionCenterMaintanance/TutionCenterMaintanance.csproj": {
-    "mtime": 1794848895.9446826,
-    "seen": 1794850942.98796,
-    "ast_hash": "41876d235a5d47af89468b04a35af5bf",
-    "semantic_hash": "41876d235a5d47af89468b04a35af5bf"
+    "mtime": 1794929631.6880572,
+    "seen": 1794934381.3147492,
+    "ast_hash": "608358961c912936c37ccd0ef1235a68",
+    "semantic_hash": ""
   },
   "TutionCenterMaintanance/appsettings.Development.json": {
     "mtime": 1793032984.7627256,
@@ -604,5 +598,107 @@
     "seen": 1794850942.9879787,
     "ast_hash": "a831cf3669f1e6ab85d8a80ebe655f99",
     "semantic_hash": "a831cf3669f1e6ab85d8a80ebe655f99"
+  },
+  "TutionCenterMaintanance/wwwroot/favicon.png": {
+    "mtime": 1793032984.6739793,
+    "seen": 1794853610.6225195,
+    "ast_hash": "eab4f24ab5ff80be586dcdab8e87dc9c",
+    "semantic_hash": ""
+  },
+  "TutionCenterMaintanance.Client/Properties/launchSettings.json": {
+    "mtime": 1794856400.030404,
+    "seen": 1794901847.6481235,
+    "ast_hash": "393893b5bacc4dea0e17de631c22f234",
+    "semantic_hash": ""
+  },
+  "TutionCenterMaintanance.Client/Pages/Fees/SetMonthlyFeeDialog.razor": {
+    "mtime": 1794933388.88456,
+    "seen": 1794934381.3146784,
+    "ast_hash": "214e155c8d157a4497b0d94b6c24e0ab",
+    "semantic_hash": ""
+  },
+  "TutionCenterMaintanance.Client/Pages/Financials/AddExpenseDialog.razor": {
+    "mtime": 1794933446.7984862,
+    "seen": 1794934381.3146803,
+    "ast_hash": "c7b8ceef706844ab49f8f77c16627e66",
+    "semantic_hash": ""
+  },
+  "TutionCenterMaintanance.Client/Pages/Financials/AddStationeryItemDialog.razor": {
+    "mtime": 1794933460.0168197,
+    "seen": 1794934381.3146808,
+    "ast_hash": "48a12f4ba231839b6a1879bf068850ee",
+    "semantic_hash": ""
+  },
+  "TutionCenterMaintanance.Client/Pages/Financials/AdjustStockDialog.razor": {
+    "mtime": 1794933770.4013152,
+    "seen": 1794934381.3146815,
+    "ast_hash": "e74474c7dcde68ee61aeeab2b70bae81",
+    "semantic_hash": ""
+  },
+  "TutionCenterMaintanance.Client/Pages/Financials/FinancialsPage.razor": {
+    "mtime": 1794934321.393829,
+    "seen": 1794934381.314682,
+    "ast_hash": "8b933517b811f83614b1b5573191a212",
+    "semantic_hash": ""
+  },
+  "TutionCenterMaintanance.Client/Pages/Financials/RecordPurchaseDialog.razor": {
+    "mtime": 1794933474.2439487,
+    "seen": 1794934381.3146827,
+    "ast_hash": "233d39ebaa5db630d95ae7aeaf54c373",
+    "semantic_hash": ""
+  },
+  "TutionCenterMaintanance.Client/Pages/Financials/RecordSaleDialog.razor": {
+    "mtime": 1794933778.2468233,
+    "seen": 1794934381.3146834,
+    "ast_hash": "ca216c0104542f2efba56d48255525db",
+    "semantic_hash": ""
+  },
+  "TutionCenterMaintanance.Shared/DTOs/Expenses/ExpenseDtos.cs": {
+    "mtime": 1794932951.57667,
+    "seen": 1794934381.3147068,
+    "ast_hash": "83d8c1d93d07ea23c6028f6975d53fc5",
+    "semantic_hash": ""
+  },
+  "TutionCenterMaintanance.Shared/DTOs/Financials/FinancialsDtos.cs": {
+    "mtime": 1794932972.606578,
+    "seen": 1794934381.3147085,
+    "ast_hash": "a0286c7085560fb50e669734272db5b1",
+    "semantic_hash": ""
+  },
+  "TutionCenterMaintanance.Shared/DTOs/Stationery/StationeryDtos.cs": {
+    "mtime": 1794932963.3476303,
+    "seen": 1794934381.314713,
+    "ast_hash": "405255d9ed32e92c5be11cb05872cfe7",
+    "semantic_hash": ""
+  },
+  "TutionCenterMaintanance/Controllers/ExpensesController.cs": {
+    "mtime": 1794933052.096498,
+    "seen": 1794934381.3147252,
+    "ast_hash": "3b886f32c8ec450370ddd7bdd63f8bfc",
+    "semantic_hash": ""
+  },
+  "TutionCenterMaintanance/Controllers/FinancialsController.cs": {
+    "mtime": 1794933099.4001071,
+    "seen": 1794934381.3147266,
+    "ast_hash": "fd0f115bffd939832e84582c925f5863",
+    "semantic_hash": ""
+  },
+  "TutionCenterMaintanance/Controllers/StationeryController.cs": {
+    "mtime": 1794933081.3154683,
+    "seen": 1794934381.3147311,
+    "ast_hash": "cebd3bef6496cda0a79fa7208f5cb447",
+    "semantic_hash": ""
+  },
+  "TutionCenterMaintanance/Data/Entities/ExpenseEntity.cs": {
+    "mtime": 1794932757.146229,
+    "seen": 1794934381.314737,
+    "ast_hash": "152c7917fa52871b55682039085707d8",
+    "semantic_hash": ""
+  },
+  "TutionCenterMaintanance/Data/Entities/StationeryEntities.cs": {
+    "mtime": 1794932764.366351,
+    "seen": 1794934381.31474,
+    "ast_hash": "1b779cd60e03478a4e81dc3b7112b71e",
+    "semantic_hash": ""
   }
 }

@@ -1,5 +1,6 @@
 @page "/students"
 @attribute [Authorize]
+@implements IDisposable
 @inject IApiService ApiService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
@@ -21,41 +22,34 @@
 <MudCard Elevation="1" Class="pa-4 mb-4 rounded-lg">
     <MudGrid>
         <MudItem xs="12" sm="4">
-            <MudTextField @bind-Value="_searchQuery"
-                          Label="Search student, school, father, phone..."
+            <MudTextField T="string"
+                          Value="@_searchQuery"
+                          ValueChanged="OnSearchInputChanged"
+                          Placeholder="Search student, school, parent or phone..."
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
-                          Adornment="Adornment.End"
+                          Adornment="Adornment.Start"
                           AdornmentIcon="@Icons.Material.Filled.Search"
-                          OnAdornmentClick="ApplyFilters"
-                          Immediate="false"
-                          OnKeyDown="@(e => { if (e.Key == "Enter") ApplyFilters(); })" />
+                          Immediate="true"
+                          Clearable="true" />
         </MudItem>
-        <MudItem xs="6" sm="2">
-            <MudSelect T="int?" @bind-Value="_selectedGradeId" Label="Grade" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+        <MudItem xs="6" sm="3">
+            <MudSelect T="int?" @bind-Value="_selectedGradeId" @bind-Value:after="ApplyFilters" Label="Standard / Class" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
                 @foreach (var g in _grades)
                 {
                     <MudSelectItem T="int?" Value="@g.Id">@g.Name</MudSelectItem>
                 }
             </MudSelect>
         </MudItem>
-        <MudItem xs="6" sm="2">
-            <MudSelect T="int?" @bind-Value="_selectedBoardId" Label="Board" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+        <MudItem xs="6" sm="3">
+            <MudSelect T="int?" @bind-Value="_selectedBoardId" @bind-Value:after="ApplyFilters" Label="Educational Board" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
                 @foreach (var b in _boards)
                 {
                     <MudSelectItem T="int?" Value="@b.Id">@b.Name</MudSelectItem>
                 }
             </MudSelect>
         </MudItem>
-        <MudItem xs="6" sm="2">
-            <MudSelect T="int?" @bind-Value="_selectedBatchId" Label="Batch" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
-                @foreach (var b in _batches)
-                {
-                    <MudSelectItem T="int?" Value="@b.Id">@b.Name</MudSelectItem>
-                }
-            </MudSelect>
-        </MudItem>
-        <MudItem xs="6" sm="2" Class="d-flex align-center gap-2">
+        <MudItem xs="12" sm="2" Class="d-flex align-center gap-2">
             <MudButton Variant="Variant.Filled" Color="Color.Secondary" FullWidth="true" OnClick="ApplyFilters">
                 Filter
             </MudButton>
@@ -74,18 +68,24 @@
     <MudTable Items="@_students" Dense="true" Hover="true" Striped="true" Elevation="0">
         <HeaderContent>
             <MudTh>Student Name</MudTh>
-            <MudTh>Grade & Board</MudTh>
+            <MudTh>Standard & Board</MudTh>
             <MudTh>School</MudTh>
             <MudTh>Father / Guardian</MudTh>
-            <MudTh>Phone</MudTh>
-            <MudTh>Batches</MudTh>
+            <MudTh>Mobile Number</MudTh>
             <MudTh Style="text-align: right;">Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Student Name">
                 <div class="d-flex align-center">
                     <MudAvatar Color="Color.Primary" Size="Size.Small" Class="mr-2">
-                        @context.FullName.Substring(0, 1).ToUpper()
+                        @if (!string.IsNullOrEmpty(context.PhotoUrl))
+                        {
+                            <MudImage Src="@context.PhotoUrl" Alt="@context.FullName" ObjectFit="ObjectFit.Cover" />
+                        }
+                        else
+                        {
+                            @context.FullName.Substring(0, 1).ToUpper()
+                        }
                     </MudAvatar>
                     <div>
                         <MudText Typo="Typo.subtitle2" Class="fw-bold">@context.FullName</MudText>
@@ -93,7 +93,7 @@
                     </div>
                 </div>
             </MudTd>
-            <MudTd DataLabel="Grade & Board">
+            <MudTd DataLabel="Standard & Board">
                 <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">@context.GradeName</MudChip>
                 <MudChip T="string" Size="Size.Small" Color="Color.Surface" Variant="Variant.Text">@context.BoardName</MudChip>
             </MudTd>
@@ -112,24 +112,11 @@
                         <MudIconButton Icon="@Icons.Custom.Brands.WhatsApp"
                                        Color="Color.Success"
                                        Size="Size.Small"
-                                       Href="@($"https://wa.me/{cleanPhone}?text={Uri.EscapeDataString($"Hello from Bright Minds Tuition Center regarding {context.FullName}:")}")"
+                                       Href="@($"https://wa.me/{cleanPhone}?text={Uri.EscapeDataString($"Hello from Sai Tuition Center regarding {context.FullName}:")}")"
                                        Target="_blank"
                                        Title="Send WhatsApp Message" />
                     }
                 </div>
-            </MudTd>
-            <MudTd DataLabel="Batches">
-                @if (context.BatchNames?.Any() == true)
-                {
-                    @foreach (var b in context.BatchNames)
-                    {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Default" Class="mr-1 mb-1">@b</MudChip>
-                    }
-                }
-                else
-                {
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">No batch</MudText>
-                }
             </MudTd>
             <MudTd Style="text-align: right;" DataLabel="Actions">
                 <MudTooltip Text="Report Card">
@@ -152,8 +139,20 @@
         </NoRecordsContent>
         <PagerContent>
             <div class="d-flex justify-space-between align-center pa-4">
-                <MudText Typo="Typo.caption">Total: @_totalCount students</MudText>
-                <MudPagination Selected="_currentPage" SelectedChanged="OnPageChanged" Count="_totalPages" Color="Color.Primary" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    @if (_totalCount > 0)
+                    {
+                        <span>Showing @((_currentPage - 1) * _pageSize + 1)–@Math.Min(_currentPage * _pageSize, _totalCount) of @_totalCount students (@_pageSize per page)</span>
+                    }
+                    else
+                    {
+                        <span>0 students found</span>
+                    }
+                </MudText>
+                @if (_totalPages > 1)
+                {
+                    <MudPagination Selected="_currentPage" SelectedChanged="OnPageChanged" Count="_totalPages" Color="Color.Primary" />
+                }
             </div>
         </PagerContent>
     </MudTable>
@@ -163,17 +162,37 @@
     private List<StudentListItemDto> _students = new();
     private List<GradeDto> _grades = new();
     private List<BoardDto> _boards = new();
-    private List<BatchDto> _batches = new();
     private bool _loading = true;
 
     private string? _searchQuery;
     private int? _selectedGradeId;
     private int? _selectedBoardId;
-    private int? _selectedBatchId;
     private int _currentPage = 1;
-    private int _pageSize = 15;
+    private int _pageSize = 25;
     private int _totalCount = 0;
     private int _totalPages => (int)Math.Ceiling((double)_totalCount / Math.Max(1, _pageSize));
+
+    private System.Threading.Timer? _debounceTimer;
+
+    private void OnSearchInputChanged(string? val)
+    {
+        _searchQuery = val;
+        _debounceTimer?.Dispose();
+        _debounceTimer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                _currentPage = 1;
+                await LoadStudents();
+                StateHasChanged();
+            });
+        }, null, 250, System.Threading.Timeout.Infinite);
+    }
+
+    public void Dispose()
+    {
+        _debounceTimer?.Dispose();
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -188,9 +207,6 @@
 
         var bRes = await ApiService.GetBoardsAsync();
         if (bRes?.Success == true && bRes.Data != null) _boards = bRes.Data;
-
-        var btRes = await ApiService.GetBatchesAsync();
-        if (btRes?.Success == true && btRes.Data != null) _batches = btRes.Data;
     }
 
     private async Task LoadStudents()
@@ -199,7 +215,7 @@
         try
         {
             var res = await ApiService.GetStudentsAsync(
-                _searchQuery, _selectedGradeId, _selectedBoardId, _selectedBatchId, true, _currentPage, _pageSize);
+                _searchQuery, _selectedGradeId, _selectedBoardId, null, true, _currentPage, _pageSize);
 
             if (res?.Success == true && res.Data != null)
             {
@@ -228,7 +244,6 @@
         _searchQuery = null;
         _selectedGradeId = null;
         _selectedBoardId = null;
-        _selectedBatchId = null;
         _currentPage = 1;
         await LoadStudents();
     }
@@ -241,7 +256,14 @@
 
     private async Task OpenAddStudentDialog()
     {
-        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = false,
+            BackdropClick = false,
+            CloseButton = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
         var dialog = await DialogService.ShowAsync<StudentDialog>("Enroll New Student", options);
         var result = await dialog.Result;
         if (result != null && !result.Canceled)
@@ -253,7 +275,14 @@
     private async Task OpenEditStudentDialog(int studentId)
     {
         var parameters = new DialogParameters<StudentDialog> { { x => x.StudentId, studentId } };
-        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = false,
+            BackdropClick = false,
+            CloseButton = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
         var dialog = await DialogService.ShowAsync<StudentDialog>("Edit Student", parameters, options);
         var result = await dialog.Result;
         if (result != null && !result.Canceled)

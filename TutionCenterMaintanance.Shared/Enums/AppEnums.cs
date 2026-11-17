@@ -1,5 +1,8 @@
+using System.Text.Json.Serialization;
+
 namespace TutionCenterMaintanance.Shared.Enums;
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum Gender
 {
     Male = 1,
@@ -7,12 +10,14 @@ public enum Gender
     Other = 3
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum AttendanceStatus
 {
     Present = 1,
     Absent = 2
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum PaymentMode
 {
     Cash = 1,
@@ -22,6 +27,7 @@ public enum PaymentMode
     Other = 5
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum PaymentStatus
 {
     Pending = 1,
@@ -30,12 +36,14 @@ public enum PaymentStatus
     Overdue = 4
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum AssessmentCategory
 {
     TuitionTest = 1,
     SchoolExam = 2
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum DiscountType
 {
     Scholarship = 1,
@@ -44,6 +52,20 @@ public enum DiscountType
     Custom = 4
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum ExpenseCategory
+{
+    Rent = 1,
+    Electricity = 2,
+    WaterBill = 3,
+    Salary = 4,
+    Maintenance = 5,
+    Equipment = 6,
+    Internet = 7,
+    Miscellaneous = 8
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum FeeFrequency
 {
     Monthly = 1,

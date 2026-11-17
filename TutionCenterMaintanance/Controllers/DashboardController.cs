@@ -112,6 +112,20 @@ public class DashboardController : ControllerBase
             .Where(p => p.PaymentDate >= firstDayOfMonth)
             .SumAsync(p => (decimal?)p.Amount) ?? 0;
 
+        var monthExpenses = await _context.Expenses
+            .Where(e => e.Date >= firstDayOfMonth)
+            .SumAsync(e => (decimal?)e.Amount) ?? 0;
+
+        var monthStationerySales = await _context.StationerySales
+            .Where(s => s.Date >= firstDayOfMonth)
+            .SumAsync(s => (decimal?)s.TotalAmount) ?? 0;
+
+        var monthStationeryCost = await _context.StationeryPurchases
+            .Where(p => p.Date >= firstDayOfMonth)
+            .SumAsync(p => (decimal?)p.TotalCost) ?? 0;
+
+        var netProfit = (monthPayments + monthStationerySales) - (monthExpenses + monthStationeryCost);
+
         var upcomingAssessments = await _context.Assessments
             .Include(a => a.Grade)
             .Include(a => a.AssessmentSubjects)
@@ -137,6 +151,9 @@ public class DashboardController : ControllerBase
             TodayPresentCount = presentCount,
             TodayAbsentCount = absentCount,
             TotalFeesCollectedMonth = monthPayments,
+            TotalExpensesMonth = monthExpenses,
+            TotalStationerySalesMonth = monthStationerySales,
+            NetOperatingProfitMonth = netProfit,
             UpcomingAssessments = upcomingAssessments
         };
 

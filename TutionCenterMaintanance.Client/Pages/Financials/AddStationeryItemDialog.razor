@@ -1,0 +1,170 @@
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <div style="width: 36px; height: 36px; border-radius: 10px; background-color: var(--color-primary-soft); display: flex; align-items: center; justify-content: center;">
+                <MudIcon Icon="@Icons.Material.Filled.LocalMall" Style="color: var(--color-primary); font-size: 20px;" />
+            </div>
+            <div>
+                <MudText Typo="Typo.h6" Class="fw-bold">@(ItemToEdit != null ? "Edit Stationery Item" : "Add Stationery to Catalog")</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Notebooks, pens, geometry boxes, etc.</MudText>
+            </div>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="2">
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_name"
+                              Label="Item Name *"
+                              Placeholder="e.g. A4 Long Notebook 192 pgs, Blue Pen 5-Pack"
+                              Required="true"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense" />
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudSelect T="string"
+                           @bind-Value="_unit"
+                           Label="Unit of Measure *"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense">
+                    <MudSelectItem Value="@("Each")">Each (Piece)</MudSelectItem>
+                    <MudSelectItem Value="@("Pack")">Pack</MudSelectItem>
+                    <MudSelectItem Value="@("Box")">Box</MudSelectItem>
+                    <MudSelectItem Value="@("Dozen")">Dozen</MudSelectItem>
+                    <MudSelectItem Value="@("Sheet")">Sheet</MudSelectItem>
+                    <MudSelectItem Value="@("Set")">Set</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="decimal"
+                                 @bind-Value="_price"
+                                 Label="Default Selling Price (₹) *"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 Min="0"
+                                 Step="5"
+                                 HelperText="Price when selling to students (can be adjusted during sale)" />
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_description"
+                              Label="Description / Brand (Optional)"
+                              Placeholder="e.g. Classmate 192 pgs ruled, Reynolds 0.5mm"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="Save"
+                   Disabled="_saving || string.IsNullOrWhiteSpace(_name)">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>@(ItemToEdit != null ? "Save Changes" : "Add to Catalog")</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public StationeryItemDto? ItemToEdit { get; set; }
+
+    private string _name = string.Empty;
+    private string? _description;
+    private string _unit = "Each";
+    private decimal _price = 0;
+    private bool _saving = false;
+
+    protected override void OnInitialized()
+    {
+        if (ItemToEdit != null)
+        {
+            _name = ItemToEdit.Name;
+            _description = ItemToEdit.Description;
+            _unit = ItemToEdit.Unit;
+            _price = ItemToEdit.DefaultSellingPrice;
+        }
+    }
+
+    private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(_name))
+        {
+            Snackbar.Add("Please enter an item name.", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            if (ItemToEdit != null)
+            {
+                var req = new UpdateStationeryItemRequest
+                {
+                    Id = ItemToEdit.Id,
+                    Name = _name.Trim(),
+                    Description = _description?.Trim(),
+                    Unit = _unit,
+                    DefaultSellingPrice = _price,
+                    IsActive = true
+                };
+                var res = await ApiService.UpdateStationeryItemAsync(ItemToEdit.Id, req);
+                if (res?.Success == true)
+                {
+                    Snackbar.Add($"Item '{_name}' updated!", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add(res?.Message ?? "Failed to update item.", Severity.Error);
+                }
+            }
+            else
+            {
+                var req = new CreateStationeryItemRequest
+                {
+                    Name = _name.Trim(),
+                    Description = _description?.Trim(),
+                    Unit = _unit,
+                    DefaultSellingPrice = _price
+                };
+                var res = await ApiService.CreateStationeryItemAsync(req);
+                if (res?.Success == true)
+                {
+                    Snackbar.Add($"Stationery item '{_name}' added to catalog!", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add(res?.Message ?? "Failed to add item.", Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

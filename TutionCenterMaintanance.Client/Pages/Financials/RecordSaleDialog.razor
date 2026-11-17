@@ -1,0 +1,217 @@
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <div style="width: 36px; height: 36px; border-radius: 10px; background-color: var(--color-success-soft); display: flex; align-items: center; justify-content: center;">
+                <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Style="color: var(--color-success); font-size: 20px;" />
+            </div>
+            <div>
+                <MudText Typo="Typo.h6" Class="fw-bold">Record Stationery Sale</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Sell notebook, pen, or item to student (Flexible price)</MudText>
+            </div>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="2">
+            <MudItem xs="12">
+                <MudSelect T="int"
+                           Value="_model.StationeryItemId"
+                           ValueChanged="OnItemSelected"
+                           Label="Select Item to Sell *"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense">
+                    @foreach (var item in Items)
+                    {
+                        <MudSelectItem Value="@item.Id">
+                            @item.Name (@item.Unit) — Stock: @item.CurrentStock — Default: ₹@item.DefaultSellingPrice
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            @if (SelectedItem != null)
+            {
+                <MudItem xs="12">
+                    <div class="pa-2 px-3 rounded-lg d-flex justify-space-between align-center"
+                         style="background-color: @(SelectedItem.CurrentStock < 5 ? "var(--color-warning-soft)" : "var(--color-paper-subtle)"); border: 1px solid var(--color-rule);">
+                        <span style="font-size: 0.82rem; color: var(--color-ink-secondary);">Available in Stock:</span>
+                        <span style="font-weight: 700; font-size: 0.95rem; color: @(SelectedItem.CurrentStock <= 0 ? "var(--color-error)" : "var(--color-ink)");">
+                            @SelectedItem.CurrentStock @(SelectedItem.Unit)s available
+                        </span>
+                    </div>
+                </MudItem>
+            }
+
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int"
+                                 @bind-Value="_model.Quantity"
+                                 Label="Quantity Sold *"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 Min="1"
+                                 Max="@(SelectedItem?.CurrentStock ?? 1000)" />
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="decimal"
+                                 @bind-Value="_model.UnitPrice"
+                                 Label="Selling Price per Unit (₹) *"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 Min="0.01M"
+                                 Step="1"
+                                 HelperText="Flexible: adjust price per sale as needed" />
+            </MudItem>
+
+            <!-- Total Revenue Preview -->
+            <MudItem xs="12">
+                <div class="pa-3 rounded-lg d-flex justify-space-between align-center" style="background-color: var(--color-success-soft); border: 1px dashed var(--color-success);">
+                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--color-success);">Total Cash Received:</span>
+                    <span style="font-size: 1.25rem; font-weight: 700; color: var(--color-success); font-variant-numeric: tabular-nums;">
+                        ₹@(_model.Quantity * _model.UnitPrice).ToString("N0")
+                    </span>
+                </div>
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudSelect T="int?"
+                           @bind-Value="_model.StudentId"
+                           Label="Buyer (Student) — Optional"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense"
+                           Clearable="true">
+                    <MudSelectItem Value="@((int?)null)">Walk-in / Cash Student</MudSelectItem>
+                    @foreach (var s in Students)
+                    {
+                        <MudSelectItem Value="@((int?)s.Id)">@s.FullName (@s.GradeName)</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudDatePicker @bind-Date="_date"
+                               Label="Sale Date *"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               MaxDate="DateTime.Today" />
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_model.Notes"
+                              Label="Notes (Optional)"
+                              Placeholder="e.g. Paid in cash, Term 2 notebooks"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Success"
+                   Variant="Variant.Filled"
+                   OnClick="Save"
+                   Disabled="_saving || _model.StationeryItemId <= 0 || _model.Quantity <= 0">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Recording...</span>
+            }
+            else
+            {
+                <span>Record Sale</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public List<StationeryItemDto> Items { get; set; } = new();
+
+    [Parameter]
+    public List<StudentListItemDto> Students { get; set; } = new();
+
+    [Parameter]
+    public int? PreSelectedItemId { get; set; }
+
+    private RecordStationerySaleRequest _model = new();
+    private DateTime? _date = DateTime.Today;
+    private bool _saving = false;
+
+    private StationeryItemDto? SelectedItem => Items.FirstOrDefault(i => i.Id == _model.StationeryItemId);
+
+    protected override void OnInitialized()
+    {
+        if (PreSelectedItemId.HasValue && PreSelectedItemId.Value > 0)
+        {
+            _model.StationeryItemId = PreSelectedItemId.Value;
+        }
+        else if (Items.Any())
+        {
+            _model.StationeryItemId = Items.First().Id;
+        }
+
+        _model.Quantity = 1;
+        if (SelectedItem != null)
+        {
+            _model.UnitPrice = SelectedItem.DefaultSellingPrice;
+        }
+    }
+
+    private void OnItemSelected(int itemId)
+    {
+        _model.StationeryItemId = itemId;
+        var item = Items.FirstOrDefault(i => i.Id == itemId);
+        if (item != null)
+        {
+            _model.UnitPrice = item.DefaultSellingPrice;
+        }
+    }
+
+    private async Task Save()
+    {
+        if (_model.StationeryItemId <= 0 || _model.Quantity <= 0)
+        {
+            Snackbar.Add("Please select an item and enter quantity.", Severity.Warning);
+            return;
+        }
+
+        if (SelectedItem != null && _model.Quantity > SelectedItem.CurrentStock)
+        {
+            Snackbar.Add($"Cannot sell {_model.Quantity} unit(s). Only {SelectedItem.CurrentStock} available in stock.", Severity.Error);
+            return;
+        }
+
+        _model.Date = _date ?? DateTime.Today;
+        _saving = true;
+
+        try
+        {
+            var res = await ApiService.RecordStationerySaleAsync(_model);
+            if (res?.Success == true)
+            {
+                Snackbar.Add($"Sold {_model.Quantity} unit(s) of '{SelectedItem?.Name}' for ₹{_model.Quantity * _model.UnitPrice:N0}!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to record sale.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

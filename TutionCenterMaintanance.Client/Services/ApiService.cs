@@ -1,5 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using TutionCenterMaintanance.Client.Auth;
 using TutionCenterMaintanance.Shared.DTOs.Academic;
 using TutionCenterMaintanance.Shared.DTOs.Assessments;
@@ -8,6 +10,9 @@ using TutionCenterMaintanance.Shared.DTOs.Auth;
 using TutionCenterMaintanance.Shared.DTOs.Communication;
 using TutionCenterMaintanance.Shared.DTOs.Dashboard;
 using TutionCenterMaintanance.Shared.DTOs.Fees;
+using TutionCenterMaintanance.Shared.DTOs.Expenses;
+using TutionCenterMaintanance.Shared.DTOs.Stationery;
+using TutionCenterMaintanance.Shared.DTOs.Financials;
 using TutionCenterMaintanance.Shared.DTOs.Notifications;
 using TutionCenterMaintanance.Shared.DTOs.Settings;
 using TutionCenterMaintanance.Shared.DTOs.Students;
@@ -81,6 +86,8 @@ public interface IApiService
     Task<ApiResponse<AttendanceSummaryDto>?> GetAttendanceSummaryAsync(DateTime? date = null);
 
     // Fees
+    Task<ApiResponse<List<StudentMonthlyStatusDto>>?> GetMonthlyStatusAsync(int? month = null, int? year = null, int? gradeId = null);
+    Task<ApiResponse<bool>?> SetMonthlyFeeAsync(SetMonthlyFeeRequest request);
     Task<ApiResponse<List<FeePlanDto>>?> GetFeePlansAsync(int? gradeId = null, int? academicYearId = null);
     Task<ApiResponse<FeePlanDto>?> CreateFeePlanAsync(FeePlanDto dto);
     Task<ApiResponse<List<DiscountDto>>?> GetDiscountsAsync();
@@ -95,6 +102,28 @@ public interface IApiService
     Task<ApiResponse<List<MonthlyCollectionDto>>?> GetMonthlyCollectionTrendAsync();
     Task<ApiResponse<List<PaymentModeBreakdownDto>>?> GetPaymentModeBreakdownAsync();
     Task<ApiResponse<List<GradeFinancialSummaryDto>>?> GetGradeFinancialSummariesAsync();
+
+    // Expenses
+    Task<ApiResponse<List<ExpenseDto>>?> GetExpensesAsync(int? month = null, int? year = null, ExpenseCategory? category = null);
+    Task<ApiResponse<ExpenseDto>?> CreateExpenseAsync(CreateExpenseRequest request);
+    Task<ApiResponse<bool>?> DeleteExpenseAsync(int id);
+
+    // Stationery
+    Task<ApiResponse<List<StationeryItemDto>>?> GetStationeryItemsAsync();
+    Task<ApiResponse<StationeryItemDto>?> CreateStationeryItemAsync(CreateStationeryItemRequest request);
+    Task<ApiResponse<bool>?> UpdateStationeryItemAsync(int id, UpdateStationeryItemRequest request);
+    Task<ApiResponse<bool>?> DeleteStationeryItemAsync(int id);
+    Task<ApiResponse<List<StationeryPurchaseDto>>?> GetStationeryPurchasesAsync(int? month = null, int? year = null);
+    Task<ApiResponse<StationeryPurchaseDto>?> RecordStationeryPurchaseAsync(RecordStationeryPurchaseRequest request);
+    Task<ApiResponse<bool>?> DeleteStationeryPurchaseAsync(int id);
+    Task<ApiResponse<List<StationerySaleDto>>?> GetStationerySalesAsync(int? month = null, int? year = null);
+    Task<ApiResponse<StationerySaleDto>?> RecordStationerySaleAsync(RecordStationerySaleRequest request);
+    Task<ApiResponse<bool>?> DeleteStationerySaleAsync(int id);
+    Task<ApiResponse<bool>?> AdjustStationeryStockAsync(QuickStockAdjustmentRequest request);
+
+    // Financials
+    Task<ApiResponse<FinancialOverviewDto>>? GetFinancialOverviewAsync(int? month = null, int? year = null);
+    Task<ApiResponse<List<MonthlyFinancialTrendDto>>?> GetFinancialTrendsAsync(int? year = null);
 
     // Notifications
     Task<ApiResponse<List<NotificationDto>>?> GetNotificationsAsync(bool? unreadOnly = null);
@@ -146,6 +175,11 @@ public interface IApiService
 
 public class ApiService : IApiService
 {
+    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter() }
+    };
+
     private readonly HttpClient _http;
     private readonly ILocalStorageService _localStorage;
 
@@ -378,27 +412,27 @@ public class ApiService : IApiService
     {
         await EnsureAuthHeaderAsync();
         var url = $"api/Students?search={Uri.EscapeDataString(search ?? "")}&gradeId={gradeId}&boardId={boardId}&batchId={batchId}&isActive={isActive}&page={page}&pageSize={pageSize}";
-        return await _http.GetFromJsonAsync<ApiResponse<PaginatedResult<StudentListItemDto>>>(url);
+        return await _http.GetFromJsonAsync<ApiResponse<PaginatedResult<StudentListItemDto>>>(url, _jsonOptions);
     }
 
     public async Task<ApiResponse<StudentDto>?> GetStudentByIdAsync(int id)
     {
         await EnsureAuthHeaderAsync();
-        return await _http.GetFromJsonAsync<ApiResponse<StudentDto>>($"api/Students/{id}");
+        return await _http.GetFromJsonAsync<ApiResponse<StudentDto>>($"api/Students/{id}", _jsonOptions);
     }
 
     public async Task<ApiResponse<StudentDto>?> CreateStudentAsync(CreateStudentRequest request)
     {
         await EnsureAuthHeaderAsync();
-        var res = await _http.PostAsJsonAsync("api/Students", request);
-        return await res.Content.ReadFromJsonAsync<ApiResponse<StudentDto>>();
+        var res = await _http.PostAsJsonAsync("api/Students", request, _jsonOptions);
+        return await res.Content.ReadFromJsonAsync<ApiResponse<StudentDto>>(_jsonOptions);
     }
 
     public async Task<ApiResponse<bool>?> UpdateStudentAsync(int id, UpdateStudentRequest request)
     {
         await EnsureAuthHeaderAsync();
-        var res = await _http.PutAsJsonAsync($"api/Students/{id}", request);
-        return await res.Content.ReadFromJsonAsync<ApiResponse<bool>>();
+        var res = await _http.PutAsJsonAsync($"api/Students/{id}", request, _jsonOptions);
+        return await res.Content.ReadFromJsonAsync<ApiResponse<bool>>(_jsonOptions);
     }
 
     public async Task<ApiResponse<bool>?> DeleteStudentAsync(int id)
@@ -563,6 +597,128 @@ public class ApiService : IApiService
     {
         await EnsureAuthHeaderAsync();
         return await _http.GetFromJsonAsync<ApiResponse<List<GradeFinancialSummaryDto>>>("api/Fees/analytics/grades");
+    }
+
+    public async Task<ApiResponse<List<StudentMonthlyStatusDto>>?> GetMonthlyStatusAsync(int? month = null, int? year = null, int? gradeId = null)
+    {
+        await EnsureAuthHeaderAsync();
+        return await _http.GetFromJsonAsync<ApiResponse<List<StudentMonthlyStatusDto>>>($"api/Fees/monthly-status?month={month}&year={year}&gradeId={gradeId}");
+    }
+
+    public async Task<ApiResponse<bool>?> SetMonthlyFeeAsync(SetMonthlyFeeRequest request)
+    {
+        await EnsureAuthHeaderAsync();
+        var res = await _http.PutAsJsonAsync("api/Fees/monthly-fee", request);
+        return await res.Content.ReadFromJsonAsync<ApiResponse<bool>>();
+    }
+
+    // Expenses
+    public async Task<ApiResponse<List<ExpenseDto>>?> GetExpensesAsync(int? month = null, int? year = null, ExpenseCategory? category = null)
+    {
+        await EnsureAuthHeaderAsync();
+        return await _http.GetFromJsonAsync<ApiResponse<List<ExpenseDto>>>($"api/Expenses?month={month}&year={year}&category={category}");
+    }
+
+    public async Task<ApiResponse<ExpenseDto>?> CreateExpenseAsync(CreateExpenseRequest request)
+    {
+        await EnsureAuthHeaderAsync();
+        var res = await _http.PostAsJsonAsync("api/Expenses", request);
+        return await res.Content.ReadFromJsonAsync<ApiResponse<ExpenseDto>>();
+    }
+
+    public async Task<ApiResponse<bool>?> DeleteExpenseAsync(int id)
+    {
+        await EnsureAuthHeaderAsync();
+        var res = await _http.DeleteAsync($"api/Expenses/{id}");
+        return await res.Content.ReadFromJsonAsync<ApiResponse<bool>>();
+    }
+
+    // Stationery
+    public async Task<ApiResponse<List<StationeryItemDto>>?> GetStationeryItemsAsync()
+    {
+        await EnsureAuthHeaderAsync();
+        return await _http.GetFromJsonAsync<ApiResponse<List<StationeryItemDto>>>("api/Stationery/items");
+    }
+
+    public async Task<ApiResponse<StationeryItemDto>?> CreateStationeryItemAsync(CreateStationeryItemRequest request)
+    {
+        await EnsureAuthHeaderAsync();
+        var res = await _http.PostAsJsonAsync("api/Stationery/items", request);
+        return await res.Content.ReadFromJsonAsync<ApiResponse<StationeryItemDto>>();
+    }
+
+    public async Task<ApiResponse<bool>?> UpdateStationeryItemAsync(int id, UpdateStationeryItemRequest request)
+    {
+        await EnsureAuthHeaderAsync();
+        var res = await _http.PutAsJsonAsync($"api/Stationery/items/{id}", request);
+        return await res.Content.ReadFromJsonAsync<ApiResponse<bool>>();
+    }
+
+    public async Task<ApiResponse<bool>?> DeleteStationeryItemAsync(int id)
+    {
+        await EnsureAuthHeaderAsync();
+        var res = await _http.DeleteAsync($"api/Stationery/items/{id}");
+        return await res.Content.ReadFromJsonAsync<ApiResponse<bool>>();
+    }
+
+    public async Task<ApiResponse<List<StationeryPurchaseDto>>?> GetStationeryPurchasesAsync(int? month = null, int? year = null)
+    {
+        await EnsureAuthHeaderAsync();
+        return await _http.GetFromJsonAsync<ApiResponse<List<StationeryPurchaseDto>>>($"api/Stationery/purchases?month={month}&year={year}");
+    }
+
+    public async Task<ApiResponse<StationeryPurchaseDto>?> RecordStationeryPurchaseAsync(RecordStationeryPurchaseRequest request)
+    {
+        await EnsureAuthHeaderAsync();
+        var res = await _http.PostAsJsonAsync("api/Stationery/purchases", request);
+        return await res.Content.ReadFromJsonAsync<ApiResponse<StationeryPurchaseDto>>();
+    }
+
+    public async Task<ApiResponse<bool>?> DeleteStationeryPurchaseAsync(int id)
+    {
+        await EnsureAuthHeaderAsync();
+        var res = await _http.DeleteAsync($"api/Stationery/purchases/{id}");
+        return await res.Content.ReadFromJsonAsync<ApiResponse<bool>>();
+    }
+
+    public async Task<ApiResponse<List<StationerySaleDto>>?> GetStationerySalesAsync(int? month = null, int? year = null)
+    {
+        await EnsureAuthHeaderAsync();
+        return await _http.GetFromJsonAsync<ApiResponse<List<StationerySaleDto>>>($"api/Stationery/sales?month={month}&year={year}");
+    }
+
+    public async Task<ApiResponse<StationerySaleDto>?> RecordStationerySaleAsync(RecordStationerySaleRequest request)
+    {
+        await EnsureAuthHeaderAsync();
+        var res = await _http.PostAsJsonAsync("api/Stationery/sales", request);
+        return await res.Content.ReadFromJsonAsync<ApiResponse<StationerySaleDto>>();
+    }
+
+    public async Task<ApiResponse<bool>?> DeleteStationerySaleAsync(int id)
+    {
+        await EnsureAuthHeaderAsync();
+        var res = await _http.DeleteAsync($"api/Stationery/sales/{id}");
+        return await res.Content.ReadFromJsonAsync<ApiResponse<bool>>();
+    }
+
+    public async Task<ApiResponse<bool>?> AdjustStationeryStockAsync(QuickStockAdjustmentRequest request)
+    {
+        await EnsureAuthHeaderAsync();
+        var res = await _http.PostAsJsonAsync("api/Stationery/adjust-stock", request);
+        return await res.Content.ReadFromJsonAsync<ApiResponse<bool>>();
+    }
+
+    // Financials
+    public async Task<ApiResponse<FinancialOverviewDto>>? GetFinancialOverviewAsync(int? month = null, int? year = null)
+    {
+        await EnsureAuthHeaderAsync();
+        return await _http.GetFromJsonAsync<ApiResponse<FinancialOverviewDto>>($"api/Financials/overview?month={month}&year={year}");
+    }
+
+    public async Task<ApiResponse<List<MonthlyFinancialTrendDto>>?> GetFinancialTrendsAsync(int? year = null)
+    {
+        await EnsureAuthHeaderAsync();
+        return await _http.GetFromJsonAsync<ApiResponse<List<MonthlyFinancialTrendDto>>>($"api/Financials/trends?year={year}");
     }
 
     // Notifications

@@ -1,0 +1,112 @@
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <div style="width: 36px; height: 36px; border-radius: 10px; background-color: var(--color-warning-soft); display: flex; align-items: center; justify-content: center;">
+                <MudIcon Icon="@Icons.Material.Filled.Tune" Style="color: var(--color-warning); font-size: 20px;" />
+            </div>
+            <div>
+                <MudText Typo="Typo.h6" Class="fw-bold">Adjust Physical Stock</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Flexible inventory count correction</MudText>
+            </div>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <div class="pa-3 rounded-lg mb-4" style="background-color: var(--color-paper-subtle); border: 1px solid var(--color-rule);">
+            <div class="d-flex justify-space-between align-center">
+                <span style="font-weight: 600; color: var(--color-ink);">@Item.Name</span>
+                <span class="adorable-badge adorable-badge-info" style="font-size: 0.75rem;">Current: @Item.CurrentStock @(Item.Unit)s</span>
+            </div>
+        </div>
+
+        <MudGrid Spacing="2">
+            <MudItem xs="12">
+                <MudNumericField T="int"
+                                 @bind-Value="_targetStock"
+                                 Label="Actual Physical Count *"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 Min="0"
+                                 HelperText="Enter the exact quantity currently on the shelf" />
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_reason"
+                              Label="Reason for Count Adjustment *"
+                              Placeholder="e.g. Physical inventory count, damaged notebook discarded"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Warning"
+                   Variant="Variant.Filled"
+                   OnClick="Save"
+                   Disabled="_saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Adjusting...</span>
+            }
+            else
+            {
+                <span>Update Stock Level</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public StationeryItemDto Item { get; set; } = null!;
+
+    private int _targetStock;
+    private string _reason = "Physical stock count verification";
+    private bool _saving = false;
+
+    protected override void OnInitialized()
+    {
+        _targetStock = Item.CurrentStock;
+    }
+
+    private async Task Save()
+    {
+        _saving = true;
+        try
+        {
+            var res = await ApiService.AdjustStationeryStockAsync(new QuickStockAdjustmentRequest
+            {
+                StationeryItemId = Item.Id,
+                TargetStock = _targetStock,
+                Reason = _reason
+            });
+
+            if (res?.Success == true)
+            {
+                Snackbar.Add($"Stock for {Item.Name} adjusted to {_targetStock} {Item.Unit} units!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to adjust stock.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

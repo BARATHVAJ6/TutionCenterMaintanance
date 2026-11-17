@@ -1,0 +1,963 @@
+@page "/financials"
+@attribute [Authorize]
+@inject IApiService ApiService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>Financials & Inventory - Sai Tuition Center</PageTitle>
+
+<!-- Page Header -->
+<div class="d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center mb-5 gap-3">
+    <div>
+        <h1 style="font-size: 1.45rem; font-weight: 700; color: var(--color-ink); margin: 0; letter-spacing: -0.02em;">
+            Financial Monitoring & Inventory
+        </h1>
+        <p style="font-size: 0.85rem; color: var(--color-ink-secondary); margin: 3px 0 0 0;">
+            Track tuition fee revenue, operating expenses, and auxiliary stationery sales
+        </p>
+    </div>
+    <div class="d-flex align-center gap-2">
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.ReceiptLong"
+                   OnClick="@(() => Navigation.NavigateTo("/fees"))"
+                   Style="border-radius: 10px; font-weight: 600; text-transform: none;">
+            Fee Collection
+        </MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Secondary"
+                   StartIcon="@Icons.Material.Filled.Refresh"
+                   OnClick="RefreshCurrentTab"
+                   Disabled="_loading"
+                   Style="border-radius: 10px; font-weight: 600; text-transform: none;">
+            Refresh
+        </MudButton>
+    </div>
+</div>
+
+<!-- Modern Modular Tabs -->
+<MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" TabPanelsClass="pa-4" @bind-ActivePanelIndex="_activeTab">
+    
+    <!-- ======================================================== -->
+    <!-- TAB 1: MONTHLY OVERVIEW & PROFITABILITY                  -->
+    <!-- ======================================================== -->
+    <MudTabPanel Text="Overview & P&L" Icon="@Icons.Material.Filled.Insights">
+        <!-- Month Navigator -->
+        <div class="pa-3 rounded-xl mb-5 d-flex align-center justify-space-between flex-wrap gap-2"
+             style="background-color: var(--color-surface); border: 1px solid var(--color-rule); box-shadow: var(--shadow-sm);">
+            <div class="d-flex align-center gap-2">
+                <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
+                               Size="Size.Small"
+                               OnClick="PrevMonth"
+                               Title="Previous month" />
+                <div style="font-weight: 700; font-size: 1.05rem; min-width: 140px; text-align: center; color: var(--color-ink);">
+                    @_selectedDate.ToString("MMMM yyyy")
+                </div>
+                <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
+                               Size="Size.Small"
+                               OnClick="NextMonth"
+                               Title="Next month" />
+                @if (_selectedDate.Month != DateTime.Today.Month || _selectedDate.Year != DateTime.Today.Year)
+                {
+                    <MudButton Size="Size.Small"
+                               Variant="Variant.Text"
+                               Color="Color.Primary"
+                               OnClick="GoToCurrentMonth"
+                               Style="text-transform: none; font-size: 0.78rem;">
+                        This Month
+                    </MudButton>
+                }
+            </div>
+            @if (_overview != null && _overview.NetProfitChange != 0)
+            {
+                <div class="d-flex align-center gap-1">
+                    <span style="font-size: 0.8rem; color: var(--color-ink-secondary);">vs Previous Month:</span>
+                    <span class="adorable-badge @(_overview.NetProfitChange >= 0 ? "adorable-badge-success" : "adorable-badge-error")"
+                          style="font-size: 0.75rem; padding: 2px 8px;">
+                        @(_overview.NetProfitChange >= 0 ? "▲ +" : "▼ ")₹@Math.Abs(_overview.NetProfitChange).ToString("N0") Net Profit
+                    </span>
+                </div>
+            }
+        </div>
+
+        @if (_loadingOverview)
+        {
+            <div class="pa-8 text-center">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            </div>
+        }
+        else if (_overview != null)
+        {
+            <!-- 4 Hallmark KPI Cards -->
+            <MudGrid Class="mb-5">
+                <!-- Combined Revenue -->
+                <MudItem xs="12" sm="6" md="3">
+                    <div class="pa-4 rounded-xl card-hover-subtle"
+                         style="background-color: var(--color-surface); border: 1px solid var(--color-rule); box-shadow: var(--shadow-sm); border-radius: 16px;">
+                        <div class="d-flex justify-space-between align-start mb-2">
+                            <span style="font-size: 0.82rem; font-weight: 600; color: var(--color-ink-secondary);">Total Revenue</span>
+                            <div style="width: 36px; height: 36px; border-radius: 10px; background-color: var(--color-success-soft); display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Outlined.TrendingUp" Style="color: var(--color-success); font-size: 18px;" />
+                            </div>
+                        </div>
+                        <div style="font-size: 1.6rem; font-weight: 700; color: var(--color-success); letter-spacing: -0.02em; font-variant-numeric: tabular-nums;">
+                            ₹@_overview.TotalCombinedRevenue.ToString("N0")
+                        </div>
+                        <div class="d-flex align-center gap-2 mt-1" style="font-size: 0.75rem; color: var(--color-ink-muted);">
+                            <span>Fees: ₹@_overview.FeeRevenue.ToString("N0")</span>
+                            <span>•</span>
+                            <span>Stationery: ₹@_overview.StationerySalesRevenue.ToString("N0")</span>
+                        </div>
+                    </div>
+                </MudItem>
+
+                <!-- Operating Expenses -->
+                <MudItem xs="12" sm="6" md="3">
+                    <div class="pa-4 rounded-xl card-hover-subtle"
+                         style="background-color: var(--color-surface); border: 1px solid var(--color-rule); box-shadow: var(--shadow-sm); border-radius: 16px;">
+                        <div class="d-flex justify-space-between align-start mb-2">
+                            <span style="font-size: 0.82rem; font-weight: 600; color: var(--color-ink-secondary);">Operating Expenses</span>
+                            <div style="width: 36px; height: 36px; border-radius: 10px; background-color: var(--color-error-soft); display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Outlined.ReceiptLong" Style="color: var(--color-error); font-size: 18px;" />
+                            </div>
+                        </div>
+                        <div style="font-size: 1.6rem; font-weight: 700; color: var(--color-error); letter-spacing: -0.02em; font-variant-numeric: tabular-nums;">
+                            ₹@_overview.OperatingExpenses.ToString("N0")
+                        </div>
+                        <span class="adorable-badge adorable-badge-neutral mt-1" style="font-size: 0.7rem; padding: 2px 6px;">
+                            Rent, electricity, salaries, etc.
+                        </span>
+                    </div>
+                </MudItem>
+
+                <!-- Overall Net Profit -->
+                <MudItem xs="12" sm="6" md="3">
+                    <div class="pa-4 rounded-xl card-hover-subtle"
+                         style="background-color: var(--color-surface); border: 1px solid var(--color-rule); box-shadow: var(--shadow-sm); border-radius: 16px;">
+                        <div class="d-flex justify-space-between align-start mb-2">
+                            <span style="font-size: 0.82rem; font-weight: 600; color: var(--color-ink-secondary);">Overall Net Profit</span>
+                            <div style="width: 36px; height: 36px; border-radius: 10px; background-color: var(--color-primary-soft); display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Outlined.AccountBalance" Style="color: var(--color-primary); font-size: 18px;" />
+                            </div>
+                        </div>
+                        <div style="font-size: 1.6rem; font-weight: 700; color: @(_overview.OverallNetProfit >= 0 ? "var(--color-primary)" : "var(--color-error)"); letter-spacing: -0.02em; font-variant-numeric: tabular-nums;">
+                            ₹@_overview.OverallNetProfit.ToString("N0")
+                        </div>
+                        <span class="adorable-badge @(_overview.OverallNetProfit >= 0 ? "adorable-badge-primary" : "adorable-badge-error") mt-1" style="font-size: 0.7rem; padding: 2px 6px;">
+                            @(_overview.OverallNetProfit >= 0 ? "Net Center Surplus" : "Deficit this month")
+                        </span>
+                    </div>
+                </MudItem>
+
+                <!-- Stationery Unit Margin -->
+                <MudItem xs="12" sm="6" md="3">
+                    <div class="pa-4 rounded-xl card-hover-subtle"
+                         style="background-color: var(--color-surface); border: 1px solid var(--color-rule); box-shadow: var(--shadow-sm); border-radius: 16px;">
+                        <div class="d-flex justify-space-between align-start mb-2">
+                            <span style="font-size: 0.82rem; font-weight: 600; color: var(--color-ink-secondary);">Stationery Margin</span>
+                            <div style="width: 36px; height: 36px; border-radius: 10px; background-color: var(--color-info-soft); display: flex; align-items: center; justify-content: center;">
+                                <MudIcon Icon="@Icons.Material.Outlined.Storefront" Style="color: var(--color-info); font-size: 18px;" />
+                            </div>
+                        </div>
+                        <div style="font-size: 1.6rem; font-weight: 700; color: var(--color-info); letter-spacing: -0.02em; font-variant-numeric: tabular-nums;">
+                            ₹@_overview.StationeryNetProfit.ToString("N0")
+                        </div>
+                        <div class="d-flex align-center gap-1 mt-1" style="font-size: 0.72rem; color: var(--color-ink-muted);">
+                            <span>Sold ₹@_overview.StationerySalesRevenue:N0</span>
+                            <span>-</span>
+                            <span>Stock ₹@_overview.StationeryPurchasesCost:N0</span>
+                        </div>
+                    </div>
+                </MudItem>
+            </MudGrid>
+
+            <!-- Detailed Breakdowns (Tuition vs Operating Expenses) -->
+            <MudGrid>
+                <!-- Tuition Fee Breakdown -->
+                <MudItem xs="12" md="6">
+                    <div class="pa-4 rounded-xl h-100"
+                         style="background-color: var(--color-surface); border: 1px solid var(--color-rule); box-shadow: var(--shadow-sm);">
+                        <div class="d-flex justify-space-between align-center mb-3">
+                            <MudText Typo="Typo.subtitle1" Class="fw-bold">Tuition Fee Health</MudText>
+                            <span class="adorable-badge adorable-badge-info" style="font-size: 0.75rem;">
+                                @_overview.CollectionRate% collected
+                            </span>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="d-flex justify-space-between mb-1" style="font-size: 0.8rem; color: var(--color-ink-secondary);">
+                                <span>Collected: ₹@_overview.FeeRevenue.ToString("N0")</span>
+                                <span>Expected: ₹@_overview.TotalExpectedFees.ToString("N0")</span>
+                            </div>
+                            <MudProgressLinear Value="@Convert.ToDouble(_overview.CollectionRate)" Color="Color.Success" Rounded="true" Size="Size.Medium" />
+                        </div>
+
+                        <MudGrid Spacing="1" Class="mt-2">
+                            <MudItem xs="4" Class="text-center pa-2 rounded-lg" style="background-color: var(--color-paper-subtle);">
+                                <div style="font-size: 0.72rem; color: var(--color-ink-muted);">Fully Paid</div>
+                                <div style="font-size: 1.15rem; font-weight: 700; color: var(--color-success);">@_overview.PaidStudentsCount</div>
+                            </MudItem>
+                            <MudItem xs="4" Class="text-center pa-2 rounded-lg" style="background-color: var(--color-paper-subtle);">
+                                <div style="font-size: 0.72rem; color: var(--color-ink-muted);">Partial Paid</div>
+                                <div style="font-size: 1.15rem; font-weight: 700; color: var(--color-warning);">@_overview.PartialStudentsCount</div>
+                            </MudItem>
+                            <MudItem xs="4" Class="text-center pa-2 rounded-lg" style="background-color: var(--color-paper-subtle);">
+                                <div style="font-size: 0.72rem; color: var(--color-ink-muted);">Unpaid</div>
+                                <div style="font-size: 1.15rem; font-weight: 700; color: var(--color-error);">@_overview.UnpaidStudentsCount</div>
+                            </MudItem>
+                        </MudGrid>
+
+                        <div class="mt-4 pt-3 d-flex justify-space-between align-center" style="border-top: 1px dashed var(--color-rule);">
+                            <span style="font-size: 0.82rem; color: var(--color-ink-secondary);">Net Operating Tuition Surplus:</span>
+                            <span style="font-size: 1rem; font-weight: 700; color: @(_overview.NetOperatingSurplus >= 0 ? "var(--color-success)" : "var(--color-error)");">
+                                ₹@_overview.NetOperatingSurplus.ToString("N0")
+                            </span>
+                        </div>
+                    </div>
+                </MudItem>
+
+                <!-- Operating Expenses by Category -->
+                <MudItem xs="12" md="6">
+                    <div class="pa-4 rounded-xl h-100"
+                         style="background-color: var(--color-surface); border: 1px solid var(--color-rule); box-shadow: var(--shadow-sm);">
+                        <div class="d-flex justify-space-between align-center mb-3">
+                            <MudText Typo="Typo.subtitle1" Class="fw-bold">Operating Expenses by Category</MudText>
+                            <MudButton Size="Size.Small"
+                                       Variant="Variant.Text"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => _activeTab = 2)"
+                                       Style="text-transform: none; font-size: 0.75rem;">
+                                Manage Expenses →
+                            </MudButton>
+                        </div>
+
+                        @if (!_overview.ExpenseBreakdown.Any())
+                        {
+                            <div class="pa-6 text-center" style="color: var(--color-ink-muted); font-size: 0.85rem;">
+                                No operating expenses recorded for @_selectedDate.ToString("MMMM yyyy").
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="d-flex flex-column gap-2">
+                                @foreach (var cat in _overview.ExpenseBreakdown)
+                                {
+                                    <div>
+                                        <div class="d-flex justify-space-between mb-1" style="font-size: 0.82rem;">
+                                            <span style="font-weight: 600; color: var(--color-ink);">@cat.CategoryName</span>
+                                            <span style="font-weight: 700; color: var(--color-ink); font-variant-numeric: tabular-nums;">
+                                                ₹@cat.TotalAmount.ToString("N0") <span style="font-size: 0.72rem; color: var(--color-ink-muted);">(@cat.Percentage%)</span>
+                                            </span>
+                                        </div>
+                                        <MudProgressLinear Value="@Convert.ToDouble(cat.Percentage)" Color="Color.Primary" Rounded="true" Size="Size.Small" />
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </MudItem>
+            </MudGrid>
+        }
+    </MudTabPanel>
+
+    <!-- ======================================================== -->
+    <!-- TAB 2: 12-MONTH TRENDS & ANNUAL PERFORMANCE              -->
+    <!-- ======================================================== -->
+    <MudTabPanel Text="12-Month Trends" Icon="@Icons.Material.Filled.BarChart">
+        <div class="pa-3 rounded-xl mb-4 d-flex align-center justify-space-between"
+             style="background-color: var(--color-surface); border: 1px solid var(--color-rule);">
+            <div style="font-weight: 700; font-size: 1rem; color: var(--color-ink);">
+                Annual Financial Performance (@_trendYear)
+            </div>
+            <div class="d-flex align-center gap-2">
+                <MudSelect T="int" Value="_trendYear" ValueChanged="OnTrendYearChanged" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 110px;">
+                    <MudSelectItem Value="DateTime.Today.Year">@DateTime.Today.Year</MudSelectItem>
+                    <MudSelectItem Value="DateTime.Today.Year - 1">@(DateTime.Today.Year - 1)</MudSelectItem>
+                </MudSelect>
+            </div>
+        </div>
+
+        @if (_loadingTrends)
+        {
+            <div class="pa-8 text-center">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            </div>
+        }
+        else
+        {
+            <MudTable Items="@_trends" Dense="true" Hover="true" Elevation="0" Outlined="true" Class="rounded-lg">
+                <HeaderContent>
+                    <MudTh>Month</MudTh>
+                    <MudTh>Tuition Fees</MudTh>
+                    <MudTh>Stationery Sales</MudTh>
+                    <MudTh>Total Revenue</MudTh>
+                    <MudTh>Operating Expenses</MudTh>
+                    <MudTh>Stock Purchases</MudTh>
+                    <MudTh>Total Expenses</MudTh>
+                    <MudTh Style="text-align: right;">Net Profit</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Month">
+                        <span style="font-weight: 700; color: var(--color-ink);">@context.MonthLabel</span>
+                    </MudTd>
+                    <MudTd DataLabel="Tuition Fees">
+                        <span style="font-variant-numeric: tabular-nums;">₹@context.FeeRevenue.ToString("N0")</span>
+                    </MudTd>
+                    <MudTd DataLabel="Stationery Sales">
+                        <span style="font-variant-numeric: tabular-nums; color: var(--color-info);">₹@context.StationeryRevenue.ToString("N0")</span>
+                    </MudTd>
+                    <MudTd DataLabel="Total Revenue">
+                        <span style="font-weight: 700; color: var(--color-success); font-variant-numeric: tabular-nums;">
+                            ₹@context.TotalRevenue.ToString("N0")
+                        </span>
+                    </MudTd>
+                    <MudTd DataLabel="Operating Expenses">
+                        <span style="font-variant-numeric: tabular-nums; color: var(--color-error);">₹@context.OperatingExpenses.ToString("N0")</span>
+                    </MudTd>
+                    <MudTd DataLabel="Stock Purchases">
+                        <span style="font-variant-numeric: tabular-nums; color: var(--color-ink-secondary);">₹@context.StationeryPurchasesCost.ToString("N0")</span>
+                    </MudTd>
+                    <MudTd DataLabel="Total Expenses">
+                        <span style="font-weight: 700; color: var(--color-error); font-variant-numeric: tabular-nums;">
+                            ₹@context.TotalExpenses.ToString("N0")
+                        </span>
+                    </MudTd>
+                    <MudTd Style="text-align: right;" DataLabel="Net Profit">
+                        <span style="font-weight: 700; font-size: 0.95rem; font-variant-numeric: tabular-nums; color: @(context.NetProfit >= 0 ? "var(--color-primary)" : "var(--color-error)");">
+                            ₹@context.NetProfit.ToString("N0")
+                        </span>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudTabPanel>
+
+    <!-- ======================================================== -->
+    <!-- TAB 3: OPERATING EXPENSES (MANUAL ENTRY)                 -->
+    <!-- ======================================================== -->
+    <MudTabPanel Text="Operating Expenses" Icon="@Icons.Material.Filled.ReceiptLong">
+        <!-- Filter and Action Bar -->
+        <div class="pa-3 rounded-xl mb-4 d-flex flex-wrap align-center justify-space-between gap-3"
+             style="background-color: var(--color-surface); border: 1px solid var(--color-rule);">
+            <div class="d-flex align-center gap-2">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Error"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenAddExpenseDialog"
+                           Style="border-radius: 8px; font-weight: 600; text-transform: none;">
+                    Record Expense
+                </MudButton>
+                <span class="adorable-badge adorable-badge-neutral" style="font-size: 0.8rem; padding: 4px 10px;">
+                    Total: ₹@_expenses.Sum(e => e.Amount).ToString("N0")
+                </span>
+            </div>
+
+            <div class="d-flex align-center gap-2">
+                <MudSelect T="ExpenseCategory?"
+                           Value="_selectedExpenseCategory"
+                           ValueChanged="OnExpenseCategoryChanged"
+                           Label="Category"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense"
+                           Clearable="true"
+                           Style="min-width: 170px;">
+                    <MudSelectItem Value="@((ExpenseCategory?)null)">All Categories</MudSelectItem>
+                    <MudSelectItem Value="@((ExpenseCategory?)ExpenseCategory.Rent)">Rent</MudSelectItem>
+                    <MudSelectItem Value="@((ExpenseCategory?)ExpenseCategory.Electricity)">Electricity</MudSelectItem>
+                    <MudSelectItem Value="@((ExpenseCategory?)ExpenseCategory.WaterBill)">Water Bill</MudSelectItem>
+                    <MudSelectItem Value="@((ExpenseCategory?)ExpenseCategory.Salary)">Staff Salary</MudSelectItem>
+                    <MudSelectItem Value="@((ExpenseCategory?)ExpenseCategory.Maintenance)">Maintenance</MudSelectItem>
+                    <MudSelectItem Value="@((ExpenseCategory?)ExpenseCategory.Equipment)">Equipment</MudSelectItem>
+                    <MudSelectItem Value="@((ExpenseCategory?)ExpenseCategory.Internet)">Internet</MudSelectItem>
+                    <MudSelectItem Value="@((ExpenseCategory?)ExpenseCategory.Miscellaneous)">Miscellaneous</MudSelectItem>
+                </MudSelect>
+            </div>
+        </div>
+
+        @if (_loadingExpenses)
+        {
+            <div class="pa-8 text-center">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            </div>
+        }
+        else if (!_expenses.Any())
+        {
+            <div class="pa-10 text-center rounded-xl" style="background-color: var(--color-surface); border: 1px dashed var(--color-rule);">
+                <MudIcon Icon="@Icons.Material.Outlined.CheckCircle" Style="font-size: 40px; color: var(--color-success);" />
+                <div class="mt-2" style="font-weight: 600; color: var(--color-ink);">No expenses recorded for this month</div>
+                <div style="font-size: 0.85rem; color: var(--color-ink-secondary);">Click "Record Expense" to log rent, electricity, salaries, etc.</div>
+            </div>
+        }
+        else
+        {
+            <MudTable Items="@_expenses" Dense="true" Hover="true" Elevation="0" Outlined="true" Class="rounded-lg">
+                <HeaderContent>
+                    <MudTh>Date</MudTh>
+                    <MudTh>Title</MudTh>
+                    <MudTh>Category</MudTh>
+                    <MudTh>Amount</MudTh>
+                    <MudTh>Paid To</MudTh>
+                    <MudTh>Notes</MudTh>
+                    <MudTh Style="text-align: right;">Action</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Date">
+                        <span style="font-size: 0.82rem;">@context.Date.ToString("dd MMM yyyy")</span>
+                    </MudTd>
+                    <MudTd DataLabel="Title">
+                        <span style="font-weight: 600; color: var(--color-ink);">@context.Title</span>
+                    </MudTd>
+                    <MudTd DataLabel="Category">
+                        <span class="adorable-badge adorable-badge-primary" style="font-size: 0.72rem; padding: 2px 8px;">
+                            @context.CategoryName
+                        </span>
+                    </MudTd>
+                    <MudTd DataLabel="Amount">
+                        <span style="font-weight: 700; color: var(--color-error); font-variant-numeric: tabular-nums;">
+                            ₹@context.Amount.ToString("N0")
+                        </span>
+                    </MudTd>
+                    <MudTd DataLabel="Paid To">
+                        <span style="font-size: 0.8rem; color: var(--color-ink-secondary);">
+                            @(string.IsNullOrWhiteSpace(context.PaidTo) ? "—" : context.PaidTo)
+                        </span>
+                    </MudTd>
+                    <MudTd DataLabel="Notes">
+                        <span style="font-size: 0.78rem; color: var(--color-ink-muted);">
+                            @(string.IsNullOrWhiteSpace(context.Notes) ? "—" : context.Notes)
+                        </span>
+                    </MudTd>
+                    <MudTd Style="text-align: right;">
+                        <MudIconButton Icon="@Icons.Material.Filled.DeleteOutline"
+                                       Size="Size.Small"
+                                       Color="Color.Error"
+                                       Title="Delete expense"
+                                       OnClick="@(() => DeleteExpense(context.Id, context.Title))" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudTabPanel>
+
+    <!-- ======================================================== -->
+    <!-- TAB 4: STATIONERY SHOP & INVENTORY                       -->
+    <!-- ======================================================== -->
+    <MudTabPanel Text="Stationery Shop & Inventory" Icon="@Icons.Material.Filled.LocalMall">
+        <!-- Action Header -->
+        <div class="pa-3 rounded-xl mb-4 d-flex flex-wrap align-center justify-space-between gap-3"
+             style="background-color: var(--color-surface); border: 1px solid var(--color-rule);">
+            <div>
+                <div style="font-weight: 700; font-size: 1rem; color: var(--color-ink);">
+                    Stationery Inventory & Sales
+                </div>
+                <div style="font-size: 0.78rem; color: var(--color-ink-secondary);">
+                    Notebooks, pens, study materials sold to tuition students
+                </div>
+            </div>
+
+            <div class="d-flex align-center gap-2 flex-wrap">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Success"
+                           StartIcon="@Icons.Material.Filled.ShoppingCart"
+                           OnClick="OpenRecordSaleDialog"
+                           Disabled="!_stationeryItems.Any()"
+                           Style="border-radius: 8px; font-weight: 600; text-transform: none;">
+                    Sell to Student
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Info"
+                           StartIcon="@Icons.Material.Filled.Inventory"
+                           OnClick="OpenRecordPurchaseDialog"
+                           Disabled="!_stationeryItems.Any()"
+                           Style="border-radius: 8px; font-weight: 600; text-transform: none;">
+                    Buy Stock In
+                </MudButton>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OpenAddItemDialog"
+                           Style="border-radius: 8px; font-weight: 600; text-transform: none;">
+                    Add New Item
+                </MudButton>
+            </div>
+        </div>
+
+        @if (_loadingStationery)
+        {
+            <div class="pa-8 text-center">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            </div>
+        }
+        else if (!_stationeryItems.Any())
+        {
+            <div class="pa-10 text-center rounded-xl" style="background-color: var(--color-surface); border: 1px dashed var(--color-rule);">
+                <MudIcon Icon="@Icons.Material.Outlined.Storefront" Style="font-size: 40px; color: var(--color-ink-muted);" />
+                <div class="mt-2" style="font-weight: 600; color: var(--color-ink);">No stationery items in catalog yet</div>
+                <div style="font-size: 0.85rem; color: var(--color-ink-secondary);">Click "Add New Item" to create items like Notebooks, Pens, and Geometry Boxes.</div>
+            </div>
+        }
+        else
+        {
+            <!-- Inventory Table -->
+            <MudTable Items="@_stationeryItems" Dense="true" Hover="true" Elevation="0" Outlined="true" Class="rounded-lg mb-6">
+                <HeaderContent>
+                    <MudTh>Item</MudTh>
+                    <MudTh>Unit</MudTh>
+                    <MudTh>Current Stock</MudTh>
+                    <MudTh>Default Price</MudTh>
+                    <MudTh>Units Sold</MudTh>
+                    <MudTh>Sales Revenue</MudTh>
+                    <MudTh>Stock Cost</MudTh>
+                    <MudTh Style="text-align: right;">Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Item">
+                        <div style="font-weight: 600; color: var(--color-ink);">@context.Name</div>
+                        @if (!string.IsNullOrWhiteSpace(context.Description))
+                        {
+                            <div style="font-size: 0.75rem; color: var(--color-ink-muted);">@context.Description</div>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Unit">
+                        <span class="adorable-badge adorable-badge-neutral" style="font-size: 0.72rem;">@context.Unit</span>
+                    </MudTd>
+                    <MudTd DataLabel="Current Stock">
+                        @if (context.CurrentStock <= 0)
+                        {
+                            <span class="adorable-badge adorable-badge-error" style="font-size: 0.75rem;">Out of Stock</span>
+                        }
+                        else if (context.CurrentStock < 5)
+                        {
+                            <span class="adorable-badge adorable-badge-warning" style="font-size: 0.75rem;">@context.CurrentStock @(context.Unit)s (Low)</span>
+                        }
+                        else
+                        {
+                            <span style="font-weight: 700; color: var(--color-ink); font-variant-numeric: tabular-nums;">
+                                @context.CurrentStock @(context.Unit)s
+                            </span>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Default Price">
+                        <span style="font-weight: 700; color: var(--color-primary); font-variant-numeric: tabular-nums;">
+                            ₹@context.DefaultSellingPrice.ToString("N0")
+                        </span>
+                    </MudTd>
+                    <MudTd DataLabel="Units Sold">
+                        <span style="font-variant-numeric: tabular-nums;">@context.TotalSoldQuantity</span>
+                    </MudTd>
+                    <MudTd DataLabel="Sales Revenue">
+                        <span style="font-weight: 700; color: var(--color-success); font-variant-numeric: tabular-nums;">
+                            ₹@context.TotalSalesRevenue.ToString("N0")
+                        </span>
+                    </MudTd>
+                    <MudTd DataLabel="Stock Cost">
+                        <span style="font-variant-numeric: tabular-nums; color: var(--color-ink-secondary);">
+                            ₹@context.TotalPurchaseCost.ToString("N0")
+                        </span>
+                    </MudTd>
+                    <MudTd Style="text-align: right;">
+                        <div class="d-flex align-center justify-end gap-1">
+                            <MudButton Size="Size.Small"
+                                       Variant="Variant.Filled"
+                                       Color="Color.Success"
+                                       Disabled="context.CurrentStock <= 0"
+                                       OnClick="@(() => OpenSellSpecificItem(context))"
+                                       Style="text-transform: none; font-size: 0.72rem; padding: 2px 8px; border-radius: 6px;">
+                                Sell
+                            </MudButton>
+                            <MudButton Size="Size.Small"
+                                       Variant="Variant.Outlined"
+                                       Color="Color.Info"
+                                       OnClick="@(() => OpenPurchaseSpecificItem(context))"
+                                       Style="text-transform: none; font-size: 0.72rem; padding: 2px 8px; border-radius: 6px;">
+                                Buy
+                            </MudButton>
+                            <MudIconButton Icon="@Icons.Material.Filled.Tune"
+                                           Size="Size.Small"
+                                           Title="Adjust Stock Count"
+                                           OnClick="@(() => OpenAdjustStock(context))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                           Size="Size.Small"
+                                           Title="Edit Item"
+                                           OnClick="@(() => OpenEditItem(context))" />
+                        </div>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+
+            <!-- Recent Sales Log -->
+            @if (_recentSales.Any())
+            {
+                <div class="mt-4 mb-2 d-flex justify-space-between align-center">
+                    <MudText Typo="Typo.subtitle2" Class="fw-bold">Recent Stationery Sales (Stock Out)</MudText>
+                    <span style="font-size: 0.78rem; color: var(--color-ink-muted);">Showing recent sales</span>
+                </div>
+                <MudTable Items="@_recentSales" Dense="true" Hover="true" Elevation="0" Outlined="true" Class="rounded-lg mb-6">
+                    <HeaderContent>
+                        <MudTh>Date</MudTh>
+                        <MudTh>Item</MudTh>
+                        <MudTh>Quantity</MudTh>
+                        <MudTh>Unit Price</MudTh>
+                        <MudTh>Total Received</MudTh>
+                        <MudTh>Student Buyer</MudTh>
+                        <MudTh Style="text-align: right;">Action</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Date">@context.Date.ToString("dd MMM yyyy")</MudTd>
+                        <MudTd DataLabel="Item"><span style="font-weight: 600;">@context.ItemName</span></MudTd>
+                        <MudTd DataLabel="Quantity">@context.Quantity @(context.Unit)s</MudTd>
+                        <MudTd DataLabel="Unit Price">₹@context.UnitPrice.ToString("N0")</MudTd>
+                        <MudTd DataLabel="Total Received">
+                            <span style="font-weight: 700; color: var(--color-success);">₹@context.TotalAmount.ToString("N0")</span>
+                        </MudTd>
+                        <MudTd DataLabel="Student Buyer">@(string.IsNullOrWhiteSpace(context.StudentName) ? "Walk-in Student" : context.StudentName)</MudTd>
+                        <MudTd Style="text-align: right;">
+                            <MudIconButton Icon="@Icons.Material.Filled.Undo"
+                                           Size="Size.Small"
+                                           Color="Color.Default"
+                                           Title="Reverse this sale"
+                                           OnClick="@(() => DeleteSale(context.Id, context.ItemName))" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        }
+    </MudTabPanel>
+
+</MudTabs>
+
+@code {
+    private int _activeTab = 0;
+    private DateTime _selectedDate = DateTime.Today;
+    private int _trendYear = DateTime.Today.Year;
+    private bool _loading = false;
+
+    // Overview Tab
+    private FinancialOverviewDto? _overview;
+    private bool _loadingOverview = false;
+
+    // Trends Tab
+    private List<MonthlyFinancialTrendDto> _trends = new();
+    private bool _loadingTrends = false;
+
+    // Expenses Tab
+    private List<ExpenseDto> _expenses = new();
+    private ExpenseCategory? _selectedExpenseCategory = null;
+    private bool _loadingExpenses = false;
+
+    // Stationery Tab
+    private List<StationeryItemDto> _stationeryItems = new();
+    private List<StationerySaleDto> _recentSales = new();
+    private List<StudentListItemDto> _studentsForSale = new();
+    private bool _loadingStationery = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOverview();
+        await LoadStudents();
+    }
+
+    private async Task RefreshCurrentTab()
+    {
+        switch (_activeTab)
+        {
+            case 0:
+                await LoadOverview();
+                break;
+            case 1:
+                await LoadTrends();
+                break;
+            case 2:
+                await LoadExpenses();
+                break;
+            case 3:
+                await LoadStationery();
+                break;
+        }
+    }
+
+    private async Task PrevMonth()
+    {
+        _selectedDate = _selectedDate.AddMonths(-1);
+        await LoadOverview();
+    }
+
+    private async Task NextMonth()
+    {
+        _selectedDate = _selectedDate.AddMonths(1);
+        await LoadOverview();
+    }
+
+    private async Task GoToCurrentMonth()
+    {
+        _selectedDate = DateTime.Today;
+        await LoadOverview();
+    }
+
+    private async Task OnTrendYearChanged(int year)
+    {
+        _trendYear = year;
+        await LoadTrends();
+    }
+
+    private async Task OnExpenseCategoryChanged(ExpenseCategory? category)
+    {
+        _selectedExpenseCategory = category;
+        await LoadExpenses();
+    }
+
+    private async Task LoadOverview()
+    {
+        _loadingOverview = true;
+        try
+        {
+            var res = await ApiService.GetFinancialOverviewAsync(_selectedDate.Month, _selectedDate.Year);
+            if (res?.Success == true)
+            {
+                _overview = res.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading overview: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loadingOverview = false;
+        }
+    }
+
+    private async Task LoadTrends()
+    {
+        _loadingTrends = true;
+        try
+        {
+            var res = await ApiService.GetFinancialTrendsAsync(_trendYear);
+            if (res?.Success == true && res.Data != null)
+            {
+                _trends = res.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading trends: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loadingTrends = false;
+        }
+    }
+
+    private async Task LoadExpenses()
+    {
+        _loadingExpenses = true;
+        try
+        {
+            var res = await ApiService.GetExpensesAsync(_selectedDate.Month, _selectedDate.Year, _selectedExpenseCategory);
+            if (res?.Success == true && res.Data != null)
+            {
+                _expenses = res.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading expenses: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loadingExpenses = false;
+        }
+    }
+
+    private async Task LoadStationery()
+    {
+        _loadingStationery = true;
+        try
+        {
+            var itemsRes = await ApiService.GetStationeryItemsAsync();
+            if (itemsRes?.Success == true && itemsRes.Data != null)
+            {
+                _stationeryItems = itemsRes.Data;
+            }
+
+            var salesRes = await ApiService.GetStationerySalesAsync();
+            if (salesRes?.Success == true && salesRes.Data != null)
+            {
+                _recentSales = salesRes.Data.Take(15).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading stationery: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loadingStationery = false;
+        }
+    }
+
+    private async Task LoadStudents()
+    {
+        try
+        {
+            var res = await ApiService.GetStudentsAsync(pageSize: 100);
+            if (res?.Success == true && res.Data?.Items != null)
+            {
+                _studentsForSale = res.Data.Items;
+            }
+        }
+        catch { }
+    }
+
+    // --- Expense Dialog Actions ---
+    private async Task OpenAddExpenseDialog()
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<AddExpenseDialog>("Record Center Expense", options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled)
+        {
+            await LoadExpenses();
+            await LoadOverview();
+        }
+    }
+
+    private async Task DeleteExpense(int id, string title)
+    {
+        bool? confirm = await DialogService.ShowMessageBoxAsync(
+            "Confirm Delete",
+            $"Are you sure you want to delete expense '{title}'?",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (confirm == true)
+        {
+            var res = await ApiService.DeleteExpenseAsync(id);
+            if (res?.Success == true)
+            {
+                Snackbar.Add("Expense deleted.", Severity.Success);
+                await LoadExpenses();
+                await LoadOverview();
+            }
+        }
+    }
+
+    // --- Stationery Dialog Actions ---
+    private async Task OpenAddItemDialog()
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<AddStationeryItemDialog>("Add Stationery Item", options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled)
+        {
+            await LoadStationery();
+        }
+    }
+
+    private async Task OpenEditItem(StationeryItemDto item)
+    {
+        var parameters = new DialogParameters { ["ItemToEdit"] = item };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<AddStationeryItemDialog>("Edit Stationery Item", parameters, options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled)
+        {
+            await LoadStationery();
+        }
+    }
+
+    private async Task OpenRecordPurchaseDialog()
+    {
+        var parameters = new DialogParameters { ["Items"] = _stationeryItems };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<RecordPurchaseDialog>("Buy Stock", parameters, options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled)
+        {
+            await LoadStationery();
+            await LoadOverview();
+        }
+    }
+
+    private async Task OpenPurchaseSpecificItem(StationeryItemDto item)
+    {
+        var parameters = new DialogParameters { ["Items"] = _stationeryItems, ["PreSelectedItemId"] = item.Id };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<RecordPurchaseDialog>("Buy Stock", parameters, options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled)
+        {
+            await LoadStationery();
+            await LoadOverview();
+        }
+    }
+
+    private async Task OpenRecordSaleDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            ["Items"] = _stationeryItems,
+            ["Students"] = _studentsForSale
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<RecordSaleDialog>("Sell Stationery", parameters, options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled)
+        {
+            await LoadStationery();
+            await LoadOverview();
+        }
+    }
+
+    private async Task OpenSellSpecificItem(StationeryItemDto item)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Items"] = _stationeryItems,
+            ["Students"] = _studentsForSale,
+            ["PreSelectedItemId"] = item.Id
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<RecordSaleDialog>("Sell Stationery", parameters, options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled)
+        {
+            await LoadStationery();
+            await LoadOverview();
+        }
+    }
+
+    private async Task OpenAdjustStock(StationeryItemDto item)
+    {
+        var parameters = new DialogParameters { ["Item"] = item };
+        var options = new DialogOptions { MaxWidth = MaxWidth.ExtraSmall, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<AdjustStockDialog>("Adjust Stock", parameters, options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled)
+        {
+            await LoadStationery();
+        }
+    }
+
+    private async Task DeleteSale(int id, string itemName)
+    {
+        bool? confirm = await DialogService.ShowMessageBoxAsync(
+            "Confirm Reversal",
+            $"Reverse sale of '{itemName}'? Stock will be restored.",
+            yesText: "Reverse",
+            cancelText: "Cancel");
+
+        if (confirm == true)
+        {
+            var res = await ApiService.DeleteStationerySaleAsync(id);
+            if (res?.Success == true)
+            {
+                Snackbar.Add("Sale reversed and stock restored.", Severity.Success);
+                await LoadStationery();
+                await LoadOverview();
+            }
+        }
+    }
+    }
+}

@@ -32,7 +32,7 @@ public class BackupController : ControllerBase
 
         var bundle = new SystemBackupBundleDto
         {
-            CenterName = center?.CenterName ?? "Bright Minds Tuition Center",
+            CenterName = center?.CenterName ?? "Sai Tuition Center",
             TotalStudentsCount = studentCount,
             TotalPaymentsCount = paymentCount,
             TotalMarksCount = marksCount,
@@ -51,8 +51,11 @@ public class BackupController : ControllerBase
         var boards = await _context.Boards.ToListAsync();
         var grades = await _context.Grades.ToListAsync();
         var subjects = await _context.Subjects.ToListAsync();
-        var feePlans = await _context.FeePlans.ToListAsync();
+        var expenses = await _context.Expenses.ToListAsync();
         var payments = await _context.Payments.ToListAsync();
+        var stationeryItems = await _context.StationeryItems.ToListAsync();
+        var stationeryPurchases = await _context.StationeryPurchases.ToListAsync();
+        var stationerySales = await _context.StationerySales.ToListAsync();
         var assessments = await _context.Assessments.Include(a => a.AssessmentSubjects).ThenInclude(asub => asub.Marks).ToListAsync();
         var timetables = await _context.Timetables.ToListAsync();
         var homeworks = await _context.Homeworks.Include(h => h.Submissions).ToListAsync();
@@ -68,8 +71,11 @@ public class BackupController : ControllerBase
             Subjects = subjects,
             Batches = batches,
             Students = students,
-            FeePlans = feePlans,
             Payments = payments,
+            Expenses = expenses,
+            StationeryItems = stationeryItems,
+            StationeryPurchases = stationeryPurchases,
+            StationerySales = stationerySales,
             Assessments = assessments,
             Timetables = timetables,
             Homeworks = homeworks,

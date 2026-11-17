@@ -1,0 +1,171 @@
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <div style="width: 36px; height: 36px; border-radius: 10px; background-color: var(--color-info-soft); display: flex; align-items: center; justify-content: center;">
+                <MudIcon Icon="@Icons.Material.Filled.Inventory" Style="color: var(--color-info); font-size: 20px;" />
+            </div>
+            <div>
+                <MudText Typo="Typo.h6" Class="fw-bold">Record Stationery Stock Purchase</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Stock In — Buying books, pens, etc. from vendor</MudText>
+            </div>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="2">
+            <MudItem xs="12">
+                <MudSelect T="int"
+                           @bind-Value="_model.StationeryItemId"
+                           Label="Select Stationery Item *"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense">
+                    @foreach (var item in Items)
+                    {
+                        <MudSelectItem Value="@item.Id">
+                            @item.Name (@item.Unit) — Current Stock: @item.CurrentStock
+                        </MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="int"
+                                 @bind-Value="_model.Quantity"
+                                 Label="Quantity Purchased *"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 Min="1"
+                                 Step="5" />
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="decimal"
+                                 @bind-Value="_model.UnitCost"
+                                 Label="Cost per Unit (₹) *"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 Min="0"
+                                 Step="1"
+                                 HelperText="Purchase price you paid per unit" />
+            </MudItem>
+
+            <!-- Total Cost Preview -->
+            <MudItem xs="12">
+                <div class="pa-3 rounded-lg d-flex justify-space-between align-center" style="background-color: var(--color-paper-subtle); border: 1px dashed var(--color-rule);">
+                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--color-ink-secondary);">Total Purchase Cost:</span>
+                    <span style="font-size: 1.15rem; font-weight: 700; color: var(--color-ink); font-variant-numeric: tabular-nums;">
+                        ₹@(_model.Quantity * _model.UnitCost).ToString("N0")
+                    </span>
+                </div>
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudDatePicker @bind-Date="_date"
+                               Label="Purchase Date *"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               MaxDate="DateTime.Today" />
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_model.Supplier"
+                              Label="Vendor / Supplier (Optional)"
+                              Placeholder="e.g. Sri Murugan Book Depot, Local Wholesale"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense" />
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_model.Notes"
+                              Label="Notes / Bill No (Optional)"
+                              Placeholder="e.g. Bill #4298, Term 2 books stock"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Info"
+                   Variant="Variant.Filled"
+                   OnClick="Save"
+                   Disabled="_saving || _model.StationeryItemId <= 0 || _model.Quantity <= 0">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Recording...</span>
+            }
+            else
+            {
+                <span>Record Stock In</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public List<StationeryItemDto> Items { get; set; } = new();
+
+    [Parameter]
+    public int? PreSelectedItemId { get; set; }
+
+    private RecordStationeryPurchaseRequest _model = new();
+    private DateTime? _date = DateTime.Today;
+    private bool _saving = false;
+
+    protected override void OnInitialized()
+    {
+        if (PreSelectedItemId.HasValue && PreSelectedItemId.Value > 0)
+        {
+            _model.StationeryItemId = PreSelectedItemId.Value;
+        }
+        else if (Items.Any())
+        {
+            _model.StationeryItemId = Items.First().Id;
+        }
+        _model.Quantity = 10;
+        _model.UnitCost = 25;
+    }
+
+    private async Task Save()
+    {
+        if (_model.StationeryItemId <= 0 || _model.Quantity <= 0)
+        {
+            Snackbar.Add("Please select an item and enter quantity.", Severity.Warning);
+            return;
+        }
+
+        _model.Date = _date ?? DateTime.Today;
+        _saving = true;
+
+        try
+        {
+            var res = await ApiService.RecordStationeryPurchaseAsync(_model);
+            if (res?.Success == true)
+            {
+                Snackbar.Add($"Stock purchase of {_model.Quantity} unit(s) recorded successfully!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to record purchase.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

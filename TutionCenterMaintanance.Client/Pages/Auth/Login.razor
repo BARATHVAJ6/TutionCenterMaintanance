@@ -6,43 +6,63 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 
-<div class="d-flex justify-center align-center" style="min-height: 80vh;">
-    <MudCard Elevation="6" Style="width: 100%; max-width: 440px; border-radius: 16px; overflow: hidden;">
-        <div class="pa-6 text-center" style="background: linear-gradient(135deg, #1E40AF 0%, #0D9488 100%); color: white;">
-            <MudIcon Icon="@Icons.Material.Filled.School" Size="Size.Large" Class="mb-2" />
-            <MudText Typo="Typo.h5" Class="fw-bold">Bright Minds Tuition</MudText>
-            <MudText Typo="Typo.body2" Class="opacity-75">Sign in to manage tuition center operations</MudText>
-        </div>
+<div class="d-flex justify-center align-center pa-4" style="min-height: 85vh;">
+    <div style="width: 100%; max-width: 420px;">
+        <!-- Clean, Adorable Login Card -->
+        <div class="pa-6 pa-sm-8 rounded-xl"
+             style="background-color: var(--color-surface); border: 1px solid var(--color-rule); box-shadow: var(--shadow-md); border-radius: 20px;">
 
-        <MudCardContent Class="pa-6">
+            <!-- Header Badge & Title (No AI Gradients) -->
+            <div class="text-center mb-6">
+                <div class="mx-auto mb-3"
+                     style="width: 56px; height: 56px; border-radius: 16px; background-color: var(--color-primary-soft); border: 1px solid var(--color-primary-border); display: flex; align-items: center; justify-content: center;">
+                    <MudIcon Icon="@Icons.Material.Filled.School" Style="color: var(--color-primary); font-size: 28px;" />
+                </div>
+                <h1 style="font-size: 1.4rem; font-weight: 700; color: var(--color-ink); margin-bottom: 6px; letter-spacing: -0.02em;">
+                    Sai Tuition Center
+                </h1>
+                <p style="font-size: 0.88rem; color: var(--color-ink-secondary); margin: 0; line-height: 1.4;">
+                    Sign in to manage student records, marks, and fees
+                </p>
+            </div>
+
+            <!-- Login Form -->
             <EditForm Model="@_loginModel" OnValidSubmit="HandleLogin">
                 <DataAnnotationsValidator />
 
-                <MudTextField @bind-Value="_loginModel.UserName"
-                              Label="Username or Email"
-                              Variant="Variant.Outlined"
-                              Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Filled.Person"
-                              Margin="Margin.Dense"
-                              Class="mb-4"
-                              For="@(() => _loginModel.UserName)" />
+                <div class="mb-3">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--color-ink-secondary); margin-bottom: 6px;">
+                        Username or email
+                    </label>
+                    <MudTextField @bind-Value="_loginModel.UserName"
+                                  Placeholder="e.g. admin"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Outlined.Person"
+                                  Margin="Margin.Dense"
+                                  For="@(() => _loginModel.UserName)" />
+                </div>
 
-                <MudTextField @bind-Value="_loginModel.Password"
-                              Label="Password"
-                              Variant="Variant.Outlined"
-                              InputType="@_passwordInputType"
-                              Adornment="Adornment.End"
-                              AdornmentIcon="@_passwordIcon"
-                              OnAdornmentClick="TogglePasswordVisibility"
-                              Margin="Margin.Dense"
-                              Class="mb-4"
-                              For="@(() => _loginModel.Password)" />
+                <div class="mb-4">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 600; color: var(--color-ink-secondary); margin-bottom: 6px;">
+                        Password
+                    </label>
+                    <MudTextField @bind-Value="_loginModel.Password"
+                                  Placeholder="Enter password"
+                                  Variant="Variant.Outlined"
+                                  InputType="@_passwordInputType"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@_passwordIcon"
+                                  OnAdornmentClick="TogglePasswordVisibility"
+                                  Margin="Margin.Dense"
+                                  For="@(() => _loginModel.Password)" />
+                </div>
 
                 @if (!string.IsNullOrEmpty(_errorMessage))
                 {
-                    <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">
+                    <div class="pa-3 mb-4 rounded-lg" style="background-color: var(--color-error-soft); border: 1px solid var(--color-error); font-size: 0.82rem; color: var(--color-error);">
                         @_errorMessage
-                    </MudAlert>
+                    </div>
                 }
 
                 <MudButton ButtonType="ButtonType.Submit"
@@ -51,7 +71,8 @@
                            FullWidth="true"
                            Size="Size.Large"
                            Disabled="_loading"
-                           Class="mt-2 py-2">
+                           Class="mt-2"
+                           Style="height: 44px; font-weight: 600; font-size: 0.95rem; border-radius: 10px;">
                     @if (_loading)
                     {
                         <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
@@ -59,22 +80,31 @@
                     }
                     else
                     {
-                        <span>Sign In</span>
+                        <span>Sign in</span>
                     }
                 </MudButton>
             </EditForm>
 
-            <MudDivider Class="my-4" />
-
-            <div class="pa-3 rounded" style="background-color: var(--mud-palette-background-grey); font-size: 0.85rem;">
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block fw-bold mb-1">
-                    Default Credentials:
-                </MudText>
-                <div><strong>Username:</strong> <code>admin</code></div>
-                <div><strong>Password:</strong> <code>Admin@123</code></div>
+            <!-- Delightful Demo Credentials Quick-Fill Pill -->
+            <div class="mt-6 pa-3 rounded-lg"
+                 style="background-color: var(--color-paper-subtle); border: 1px solid var(--color-rule); cursor: pointer;"
+                 @onclick="FillDemoCredentials"
+                 title="Click to auto-fill default admin credentials">
+                <div class="d-flex align-center justify-space-between mb-1">
+                    <span style="font-size: 0.76rem; font-weight: 700; color: var(--color-ink-muted);">
+                        Demo credentials
+                    </span>
+                    <span class="adorable-badge adorable-badge-primary" style="font-size: 0.68rem; padding: 1px 6px;">
+                        Click to auto-fill
+                    </span>
+                </div>
+                <div class="d-flex justify-space-between align-center" style="font-size: 0.8rem; color: var(--color-ink-secondary);">
+                    <span>User: <strong>admin</strong></span>
+                    <span>Pass: <strong>Admin@123</strong></span>
+                </div>
             </div>
-        </MudCardContent>
-    </MudCard>
+        </div>
+    </div>
 </div>
 
 @code {
@@ -83,9 +113,16 @@
     private string? _errorMessage;
     private bool _showPassword = false;
     private InputType _passwordInputType => _showPassword ? InputType.Text : InputType.Password;
-    private string _passwordIcon => _showPassword ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
+    private string _passwordIcon => _showPassword ? Icons.Material.Outlined.Visibility : Icons.Material.Outlined.VisibilityOff;
 
     private void TogglePasswordVisibility() => _showPassword = !_showPassword;
+
+    private void FillDemoCredentials()
+    {
+        _loginModel.UserName = "admin";
+        _loginModel.Password = "Admin@123";
+        Snackbar.Add("Demo credentials filled", Severity.Info);
+    }
 
     private async Task HandleLogin()
     {
@@ -99,17 +136,17 @@
             {
                 await LocalStorage.SetItemAsync("authToken", res.Data.Token);
                 ((CustomAuthStateProvider)AuthStateProvider).NotifyUserAuthentication(res.Data.Token);
-                Snackbar.Add($"Welcome back, {res.Data.User.FullName}!", Severity.Success);
+                Snackbar.Add("Welcome back to Sai Tuition Center!", Severity.Success);
                 Navigation.NavigateTo("/", forceLoad: false);
             }
             else
             {
-                _errorMessage = res?.Message ?? "Invalid username or password.";
+                _errorMessage = res?.Message ?? "Invalid username or password";
             }
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Connection error: {ex.Message}";
+            _errorMessage = $"Sign in failed: {ex.Message}";
         }
         finally
         {

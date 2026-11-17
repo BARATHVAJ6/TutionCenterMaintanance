@@ -9,6 +9,9 @@ public class DashboardStatsDto
     public int TodayPresentCount { get; set; }
     public int TodayAbsentCount { get; set; }
     public decimal TotalFeesCollectedMonth { get; set; }
+    public decimal TotalExpensesMonth { get; set; }
+    public decimal TotalStationerySalesMonth { get; set; }
+    public decimal NetOperatingProfitMonth { get; set; }
     public decimal TotalFeesPending { get; set; }
     public int OverdueStudentsCount { get; set; }
     public List<RecentActivityDto> RecentActivities { get; set; } = new();

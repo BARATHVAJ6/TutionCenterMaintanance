@@ -1,137 +1,416 @@
 @inject IApiService ApiService
 @inject ISnackbar Snackbar
+@inject ILocalStorageService LocalStorage
 
-<MudDialog MaxWidth="MaxWidth.Medium" FullWidth="true">
+<MudDialog Class="pa-2">
     <TitleContent>
-        <div class="d-flex align-center">
-            <MudIcon Icon="@(IsEdit ? Icons.Material.Filled.Edit : Icons.Material.Filled.PersonAdd)" Color="Color.Primary" Class="mr-2" />
-            <MudText Typo="Typo.h6">@(IsEdit ? "Edit Student Profile" : "Register New Student")</MudText>
+        <div class="d-flex align-center justify-space-between w-100 pr-2">
+            <div class="d-flex align-center gap-2">
+                <div style="width: 36px; height: 36px; border-radius: 10px; background-color: var(--color-primary-soft); display: flex; align-items: center; justify-content: center;">
+                    <MudIcon Icon="@(IsEdit ? Icons.Material.Outlined.Edit : Icons.Material.Outlined.PersonAdd)" Style="color: var(--color-primary); font-size: 20px;" />
+                </div>
+                <div>
+                    <div style="font-weight: 700; font-size: 1.1rem; color: var(--color-ink);">
+                        @(IsEdit ? "Edit Student Profile" : "Register New Student")
+                    </div>
+                    <div style="font-size: 0.78rem; color: var(--color-ink-muted);">
+                        Step @_currentStep of 3: @GetStepTitle(_currentStep)
+                    </div>
+                </div>
+            </div>
+            @if (_hasDraft && !IsEdit)
+            {
+                <div class="d-flex align-center gap-2">
+                    <span class="adorable-badge adorable-badge-info" style="font-size: 0.7rem; padding: 2px 6px;">Draft restored</span>
+                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="ClearDraftAsync" Style="text-transform: none; font-size: 0.75rem;">
+                        Clear draft
+                    </MudButton>
+                </div>
+            }
         </div>
     </TitleContent>
+
     <DialogContent>
-        <MudTabs Elevation="1" Rounded="true" Color="Color.Primary" ApplyEffectsToContainer="true" PanelClass="pa-4">
-            <!-- Tab 1: Student Information -->
-            <MudTabPanel Text="Student Details" Icon="@Icons.Material.Filled.School">
-                <MudGrid>
-                    <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_model.FirstName" Label="First Name *" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_model.LastName" Label="Last Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudSelect T="int" @bind-Value="_model.GradeId" Label="Grade / Class *" Variant="Variant.Outlined" Margin="Margin.Dense">
-                            @foreach (var g in _grades)
-                            {
-                                <MudSelectItem Value="@g.Id">@g.Name</MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudSelect T="int" @bind-Value="_model.BoardId" Label="Educational Board *" Variant="Variant.Outlined" Margin="Margin.Dense">
-                            @foreach (var b in _boards)
-                            {
-                                <MudSelectItem Value="@b.Id">@b.Name</MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_model.SchoolName" Label="Current School Name *" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudDatePicker @bind-Date="_dob" Label="Date of Birth" Variant="Variant.Outlined" Margin="Margin.Dense" MaxDate="DateTime.Today" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudSelect T="Gender" @bind-Value="_model.Gender" Label="Gender" Variant="Variant.Outlined" Margin="Margin.Dense">
-                            <MudSelectItem Value="Gender.Male">Male</MudSelectItem>
-                            <MudSelectItem Value="Gender.Female">Female</MudSelectItem>
-                            <MudSelectItem Value="Gender.Other">Other</MudSelectItem>
-                        </MudSelect>
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_model.BloodGroup" Label="Blood Group (e.g. O+, A+)" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                    </MudItem>
-                    <MudItem xs="12">
-                        <MudTextField @bind-Value="_model.Address" Label="Residential Address" Variant="Variant.Outlined" Margin="Margin.Dense" Lines="2" />
-                    </MudItem>
-                    <MudItem xs="12">
-                        <MudTextField @bind-Value="_model.MedicalNotes" Label="Medical Notes / Allergies" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                    </MudItem>
-                    <MudItem xs="12">
-                        <MudTextField @bind-Value="_model.PreviousRecords" Label="Previous Academic Records / Reference" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                    </MudItem>
-                </MudGrid>
-            </MudTabPanel>
+        <!-- Wizard Stepper Progress Bar (3 Steps) -->
+        <div class="d-flex align-center justify-space-between mb-5 px-1 py-2" style="border-bottom: 1px solid var(--color-rule);">
+            <!-- Step 1 -->
+            <div class="d-flex align-center gap-2 cursor-pointer" @onclick="@(() => GoToStep(1))" title="Step 1: Student Details">
+                <div style="width: 28px; height: 28px; border-radius: 50%; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; @(_currentStep == 1 ? "background-color: var(--color-primary); color: white;" : _currentStep > 1 ? "background-color: var(--color-success); color: white;" : "background-color: var(--color-paper-subtle); color: var(--color-ink-muted);")">
+                    @if (_currentStep > 1) { <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" /> } else { <span>1</span> }
+                </div>
+                <span class="d-none d-sm-inline" style="font-size: 0.82rem; font-weight: @(_currentStep == 1 ? "700" : "500"); color: @(_currentStep == 1 ? "var(--color-primary)" : "var(--color-ink-secondary)");">
+                    Student Details
+                </span>
+            </div>
 
-            <!-- Tab 2: Parents Information -->
-            <MudTabPanel Text="Parents & Contacts" Icon="@Icons.Material.Filled.ContactPhone">
-                <MudGrid>
-                    <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_model.Parent.FatherName" Label="Father's Name *" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_model.Parent.FatherPhone" Label="Father's Phone Number *" Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Used for SMS & Primary Calls" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_model.Parent.FatherWhatsApp" Label="Father's WhatsApp Number" Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="For performance & fee updates" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_model.Parent.MotherName" Label="Mother's Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_model.Parent.MotherPhone" Label="Mother's Phone Number" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_model.Parent.MotherWhatsApp" Label="Mother's WhatsApp Number" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_model.Parent.EmergencyContactName" Label="Emergency Contact Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudTextField @bind-Value="_model.Parent.EmergencyContactPhone" Label="Emergency Contact Phone" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                    </MudItem>
-                </MudGrid>
-            </MudTabPanel>
+            <div style="flex: 1; height: 2px; background-color: @(_currentStep > 1 ? "var(--color-success)" : "var(--color-rule)"); margin: 0 12px;"></div>
 
-            <!-- Tab 3: Batch Enrollment -->
-            <MudTabPanel Text="Batch Assignment" Icon="@Icons.Material.Filled.Groups">
-                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
-                    Select the batches this student is enrolled into:
+            <!-- Step 2 -->
+            <div class="d-flex align-center gap-2 cursor-pointer" @onclick="@(() => GoToStep(2))" title="Step 2: Parents & Contact">
+                <div style="width: 28px; height: 28px; border-radius: 50%; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; @(_currentStep == 2 ? "background-color: var(--color-primary); color: white;" : _currentStep > 2 ? "background-color: var(--color-success); color: white;" : "background-color: var(--color-paper-subtle); color: var(--color-ink-muted);")">
+                    @if (_currentStep > 2) { <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" /> } else { <span>2</span> }
+                </div>
+                <span class="d-none d-sm-inline" style="font-size: 0.82rem; font-weight: @(_currentStep == 2 ? "700" : "500"); color: @(_currentStep == 2 ? "var(--color-primary)" : "var(--color-ink-secondary)");">
+                    Parents & Contact
+                </span>
+            </div>
+
+            <div style="flex: 1; height: 2px; background-color: @(_currentStep > 2 ? "var(--color-success)" : "var(--color-rule)"); margin: 0 12px;"></div>
+
+            <!-- Step 3 -->
+            <div class="d-flex align-center gap-2 cursor-pointer" @onclick="@(() => GoToStep(3))" title="Step 3: Review & Save">
+                <div style="width: 28px; height: 28px; border-radius: 50%; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; @(_currentStep == 3 ? "background-color: var(--color-primary); color: white;" : "background-color: var(--color-paper-subtle); color: var(--color-ink-muted);")">
+                    <span>3</span>
+                </div>
+                <span class="d-none d-sm-inline" style="font-size: 0.82rem; font-weight: @(_currentStep == 3 ? "700" : "500"); color: @(_currentStep == 3 ? "var(--color-primary)" : "var(--color-ink-secondary)");">
+                    Review & Save
+                </span>
+            </div>
+        </div>
+
+        @* ================= STEP 1: STUDENT DETAILS ================= *@
+        @if (_currentStep == 1)
+        {
+            <div class="mb-3">
+                <MudText Typo="Typo.subtitle2" Class="fw-bold mb-1" Color="Color.Primary">
+                    Basic Student Information
                 </MudText>
-                @if (_batches.Any())
-                {
-                    <MudGrid>
-                        @foreach (var batch in _batches)
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    Fill in the required academic and identity details. All asterisk (*) fields are mandatory.
+                </MudText>
+            </div>
+
+            <MudGrid>
+                <!-- Optional Student Photo Upload -->
+                <MudItem xs="12">
+                    <div class="d-flex align-center gap-4 pa-3 rounded-lg" style="background-color: var(--color-paper-subtle); border: 1px dashed var(--color-rule);">
+                        <MudAvatar Size="Size.Large" Style="width: 68px; height: 68px; border: 2px solid var(--color-rule);" Color="Color.Primary">
+                            @if (!string.IsNullOrEmpty(_model.PhotoBase64))
+                            {
+                                <MudImage Src="@_model.PhotoBase64" Alt="Student Photo" ObjectFit="ObjectFit.Cover" />
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Large" />
+                            }
+                        </MudAvatar>
+                        <div>
+                            <div class="d-flex align-center gap-2">
+                                <InputFile id="student-photo-input" OnChange="OnPhotoUpload" accept=".png,.jpg,.jpeg,.webp" style="display: none;" />
+                                <MudButton HtmlTag="label"
+                                           for="student-photo-input"
+                                           Variant="Variant.Outlined"
+                                           Color="Color.Primary"
+                                           Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.CloudUpload"
+                                           Style="text-transform: none; font-size: 0.8rem; cursor: pointer;">
+                                    Upload Student Photo (Optional)
+                                </MudButton>
+                                @if (!string.IsNullOrEmpty(_model.PhotoBase64))
+                                {
+                                    <MudButton Variant="Variant.Text"
+                                               Color="Color.Error"
+                                               Size="Size.Small"
+                                               OnClick="RemovePhoto"
+                                               Style="text-transform: none; font-size: 0.78rem;">
+                                        Remove
+                                    </MudButton>
+                                }
+                            </div>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1 d-block">
+                                Accepts JPG, PNG or WebP image up to 2MB.
+                            </MudText>
+                        </div>
+                    </div>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.FirstName"
+                                  @bind-Value:after="OnFieldChanged"
+                                  Label="Student Name *"
+                                  Placeholder="Enter student's full name"
+                                  Required="true"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="int" @bind-Value="_model.GradeId" @bind-Value:after="OnFieldChanged" Label="Standard / Class *" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var g in _grades)
                         {
-                            var isSelected = _model.BatchIds.Contains(batch.Id);
-                            <MudItem xs="12" sm="6">
-                                <MudCheckBox T="bool" Value="@isSelected" ValueChanged="@((val) => ToggleBatch(batch.Id, val))" Color="Color.Primary">
-                                    <strong>@batch.Name</strong> (@batch.GradeName - @batch.BoardName)
-                                </MudCheckBox>
-                            </MudItem>
+                            <MudSelectItem Value="@g.Id">@g.Name</MudSelectItem>
                         }
-                    </MudGrid>
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="int" @bind-Value="_model.BoardId" @bind-Value:after="OnFieldChanged" Label="Educational Board *" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var b in _boards)
+                        {
+                            <MudSelectItem Value="@b.Id">@b.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.SchoolName"
+                                  @bind-Value:after="OnFieldChanged"
+                                  Label="Current School Name *"
+                                  Placeholder="e.g. Government School, DAV Public School"
+                                  Required="true"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker @bind-Date="_dob"
+                                   @bind-Date:after="OnFieldChanged"
+                                   Label="Date of Birth"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   MaxDate="DateTime.Today" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="Gender" @bind-Value="_model.Gender" @bind-Value:after="OnFieldChanged" Label="Gender *" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        <MudSelectItem Value="Gender.Male">Male</MudSelectItem>
+                        <MudSelectItem Value="Gender.Female">Female</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <!-- Selectable Blood Group Dropdown -->
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" @bind-Value="_model.BloodGroup" @bind-Value:after="OnFieldChanged" Label="Blood Group (Optional)" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                        <MudSelectItem Value="@("A+")">A+ (A Positive)</MudSelectItem>
+                        <MudSelectItem Value="@("A-")">A- (A Negative)</MudSelectItem>
+                        <MudSelectItem Value="@("B+")">B+ (B Positive)</MudSelectItem>
+                        <MudSelectItem Value="@("B-")">B- (B Negative)</MudSelectItem>
+                        <MudSelectItem Value="@("O+")">O+ (O Positive)</MudSelectItem>
+                        <MudSelectItem Value="@("O-")">O- (O Negative)</MudSelectItem>
+                        <MudSelectItem Value="@("AB+")">AB+ (AB Positive)</MudSelectItem>
+                        <MudSelectItem Value="@("AB-")">AB- (AB Negative)</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_model.PreviousRecords"
+                                  @bind-Value:after="OnFieldChanged"
+                                  Label="Previous Academic Reference / Notes (Optional)"
+                                  Placeholder="e.g. 85% in previous standard"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Address"
+                                  @bind-Value:after="OnFieldChanged"
+                                  Label="Residential Address (Optional)"
+                                  Placeholder="House number, street, locality"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Lines="2" />
+                </MudItem>
+            </MudGrid>
+        }
+
+        @* ================= STEP 2: PARENTS & CONTACT ================= *@
+        @if (_currentStep == 2)
+        {
+            <div class="mb-3">
+                <MudText Typo="Typo.subtitle2" Class="fw-bold mb-1" Color="Color.Primary">
+                    Parents & Primary Contact
+                </MudText>
+            </div>
+
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_model.Parent.FatherName"
+                                  @bind-Value:after="OnFieldChanged"
+                                  Label="Father's Name"
+                                  Placeholder="Full name"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string"
+                                  Value="@_model.Parent.FatherPhone"
+                                  ValueChanged="OnFatherPhoneChanged"
+                                  Label="Father's Mobile Number"
+                                  Placeholder="10-digit mobile number"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Adornment="Adornment.Start"
+                                  AdornmentText="+91"
+                                  MaxLength="10"
+                                  InputType="InputType.Telephone"
+                                  UserAttributes="@PhoneInputAttributes"
+                                  Validation="@(new Func<string, string?>(ValidateFatherPhone))" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_model.Parent.MotherName"
+                                  @bind-Value:after="OnFieldChanged"
+                                  Label="Mother's Name"
+                                  Placeholder="Full name"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string"
+                                  Value="@_model.Parent.MotherPhone"
+                                  ValueChanged="OnMotherPhoneChanged"
+                                  Label="Mother's Mobile Number"
+                                  Placeholder="10-digit mobile number"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Adornment="Adornment.Start"
+                                  AdornmentText="+91"
+                                  MaxLength="10"
+                                  InputType="InputType.Telephone"
+                                  UserAttributes="@PhoneInputAttributes"
+                                  Validation="@(new Func<string, string?>(ValidateMotherPhone))" />
+                </MudItem>
+            </MudGrid>
+        }
+
+        @* ================= STEP 3: REVIEW & SAVE ================= *@
+        @if (_currentStep == 3)
+        {
+            <div class="mb-3">
+                <MudText Typo="Typo.subtitle2" Class="fw-bold mb-1" Color="Color.Primary">
+                    Review Student Registration Summary
+                </MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    Verify all entered information before finalizing registration. Click any step above or press Back to modify.
+                </MudText>
+            </div>
+
+            <div class="pa-4 rounded-xl" style="background-color: var(--color-paper-subtle); border: 1px solid var(--color-rule);">
+                <MudGrid>
+                    <!-- Student Summary with Avatar -->
+                    <MudItem xs="12" sm="6">
+                        <div class="d-flex align-center gap-3 mb-3">
+                            <MudAvatar Size="Size.Medium" Style="width: 48px; height: 48px; border: 1px solid var(--color-rule);" Color="Color.Primary">
+                                @if (!string.IsNullOrEmpty(_model.PhotoBase64))
+                                {
+                                    <MudImage Src="@_model.PhotoBase64" Alt="Student" ObjectFit="ObjectFit.Cover" />
+                                }
+                                else
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.Person" />
+                                }
+                            </MudAvatar>
+                            <div>
+                                <span style="font-size: 0.74rem; font-weight: 600; color: var(--color-ink-muted); display: block;">STUDENT NAME</span>
+                                <span style="font-size: 1rem; font-weight: 700; color: var(--color-ink);">@_model.FirstName</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <span style="font-size: 0.74rem; font-weight: 600; color: var(--color-ink-muted); display: block;">STANDARD & BOARD</span>
+                            <span style="font-size: 0.88rem; color: var(--color-ink); font-weight: 600;">
+                                @GetGradeName(_model.GradeId) • @GetBoardName(_model.BoardId)
+                            </span>
+                        </div>
+                        <div class="mb-3">
+                            <span style="font-size: 0.74rem; font-weight: 600; color: var(--color-ink-muted); display: block;">CURRENT SCHOOL</span>
+                            <span style="font-size: 0.88rem; color: var(--color-ink);">@_model.SchoolName</span>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.74rem; font-weight: 600; color: var(--color-ink-muted); display: block;">GENDER, D.O.B & BLOOD GROUP</span>
+                            <span style="font-size: 0.85rem; color: var(--color-ink-secondary);">
+                                @_model.Gender • @(_dob.HasValue ? _dob.Value.ToString("dd MMM yyyy") : "Not specified") • @(!string.IsNullOrEmpty(_model.BloodGroup) ? _model.BloodGroup : "Blood group not set")
+                            </span>
+                        </div>
+                    </MudItem>
+
+                    <!-- Parent Summary -->
+                    <MudItem xs="12" sm="6">
+                        @if (!string.IsNullOrWhiteSpace(_model.Parent.FatherName))
+                        {
+                            <div class="mb-3">
+                                <span style="font-size: 0.74rem; font-weight: 600; color: var(--color-ink-muted); display: block;">FATHER'S CONTACT</span>
+                                <span style="font-size: 0.92rem; font-weight: 700; color: var(--color-ink);">@_model.Parent.FatherName</span>
+                                <span style="font-size: 0.84rem; color: var(--color-primary); display: block; font-weight: 600;">+91 @_model.Parent.FatherPhone</span>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(_model.Parent.MotherName))
+                        {
+                            <div class="mb-3">
+                                <span style="font-size: 0.74rem; font-weight: 600; color: var(--color-ink-muted); display: block;">MOTHER'S CONTACT</span>
+                                <span style="font-size: 0.92rem; font-weight: 700; color: var(--color-ink);">@_model.Parent.MotherName</span>
+                                <span style="font-size: 0.84rem; color: var(--color-primary); display: block; font-weight: 600;">+91 @_model.Parent.MotherPhone</span>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(_model.Address))
+                        {
+                            <div>
+                                <span style="font-size: 0.74rem; font-weight: 600; color: var(--color-ink-muted); display: block;">RESIDENTIAL ADDRESS</span>
+                                <span style="font-size: 0.82rem; color: var(--color-ink-secondary);">@_model.Address</span>
+                            </div>
+                        }
+                    </MudItem>
+                </MudGrid>
+            </div>
+        }
+    </DialogContent>
+
+    <DialogActions>
+        <div class="d-flex justify-space-between align-center w-100 pa-2">
+            <div>
+                @if (_currentStep > 1)
+                {
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Default"
+                               OnClick="PrevStep"
+                               StartIcon="@Icons.Material.Filled.ArrowBack"
+                               Style="text-transform: none; border-radius: 8px;">
+                        Back
+                    </MudButton>
                 }
                 else
                 {
-                    <MudAlert Severity="Severity.Info" Dense="true">No batches created yet. You can assign batches later.</MudAlert>
+                    <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="Cancel" Style="text-transform: none;">
+                        Cancel
+                    </MudButton>
                 }
-            </MudTabPanel>
-        </MudTabs>
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveStudent" Disabled="_saving">
-            @if (_saving)
-            {
-                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                <span>Saving...</span>
-            }
-            else
-            {
-                <span>Save Student</span>
-            }
-        </MudButton>
+            </div>
+
+            <div class="d-flex align-center gap-2">
+                @if (_currentStep < 3)
+                {
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               OnClick="NextStep"
+                               EndIcon="@Icons.Material.Filled.ArrowForward"
+                               Disabled="@(!CanProceedCurrentStep)"
+                               Style="text-transform: none; font-weight: 600; border-radius: 8px; padding: 8px 20px;">
+                        Next step
+                    </MudButton>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Success"
+                               OnClick="SaveStudent"
+                               StartIcon="@Icons.Material.Filled.Check"
+                               Disabled="_saving"
+                               Style="text-transform: none; font-weight: 700; border-radius: 8px; padding: 8px 26px;">
+                        @if (_saving)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            <span>Saving student...</span>
+                        }
+                        else
+                        {
+                            <span>@(IsEdit ? "Update Student" : "Save Student")</span>
+                        }
+                    </MudButton>
+                }
+            </div>
+        </div>
     </DialogActions>
 </MudDialog>
 
@@ -147,8 +426,137 @@
     private DateTime? _dob;
     private List<GradeDto> _grades = new();
     private List<BoardDto> _boards = new();
-    private List<BatchDto> _batches = new();
     private bool _saving = false;
+    private int _currentStep = 1;
+    private bool _hasDraft = false;
+
+    private static readonly Dictionary<string, object> PhoneInputAttributes = new()
+    {
+        { "onkeypress", "return (event.charCode >= 48 && event.charCode <= 57)" },
+        { "inputmode", "numeric" },
+        { "pattern", "[0-9]*" }
+    };
+
+    private static string CleanIndianPhoneNumber(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return string.Empty;
+        return new string(input.Where(char.IsDigit).Take(10).ToArray());
+    }
+
+    private static bool IsValidIndianPhoneNumber(string? phone)
+    {
+        if (string.IsNullOrWhiteSpace(phone)) return false;
+        var cleaned = CleanIndianPhoneNumber(phone);
+        return cleaned.Length == 10 && System.Text.RegularExpressions.Regex.IsMatch(cleaned, @"^[6-9]\d{9}$");
+    }
+
+    private static bool HasContactInfo(string? name, string? phone) =>
+        !string.IsNullOrWhiteSpace(name) || !string.IsNullOrWhiteSpace(phone);
+
+    private static bool IsCompleteContact(string? name, string? phone) =>
+        !string.IsNullOrWhiteSpace(name) && IsValidIndianPhoneNumber(phone);
+
+    private async Task OnFatherPhoneChanged(string val)
+    {
+        _model.Parent.FatherPhone = CleanIndianPhoneNumber(val);
+        await OnFieldChanged();
+    }
+
+    private async Task OnMotherPhoneChanged(string val)
+    {
+        _model.Parent.MotherPhone = CleanIndianPhoneNumber(val);
+        await OnFieldChanged();
+    }
+
+    private string? ValidateFatherPhone(string val)
+    {
+        if (string.IsNullOrWhiteSpace(val)) return null;
+        var cleaned = CleanIndianPhoneNumber(val);
+        if (cleaned.Length != 10) return "Mobile number must be exactly 10 digits.";
+        if (!System.Text.RegularExpressions.Regex.IsMatch(cleaned, @"^[6-9]")) return "Indian mobile number must start with 6, 7, 8, or 9.";
+        return null;
+    }
+
+    private string? ValidateMotherPhone(string val)
+    {
+        if (string.IsNullOrWhiteSpace(val)) return null;
+        var cleaned = CleanIndianPhoneNumber(val);
+        if (cleaned.Length != 10) return "Mobile number must be exactly 10 digits.";
+        if (!System.Text.RegularExpressions.Regex.IsMatch(cleaned, @"^[6-9]")) return "Indian mobile number must start with 6, 7, 8, or 9.";
+        return null;
+    }
+
+    private async Task OnPhotoUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+        try
+        {
+            var maxFileSize = 2 * 1024 * 1024; // 2MB
+            using var stream = file.OpenReadStream(maxFileSize);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            var bytes = ms.ToArray();
+            _model.PhotoBase64 = $"data:{file.ContentType};base64,{Convert.ToBase64String(bytes)}";
+            await SaveDraftAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Could not upload image: {ex.Message}", Severity.Warning);
+        }
+    }
+
+    private async Task RemovePhoto()
+    {
+        _model.PhotoBase64 = null;
+        await SaveDraftAsync();
+    }
+
+    private bool CanProceedStep1 =>
+        !string.IsNullOrWhiteSpace(_model.FirstName) &&
+        _model.GradeId > 0 &&
+        _model.BoardId > 0 &&
+        !string.IsNullOrWhiteSpace(_model.SchoolName);
+
+    private bool CanProceedStep2
+    {
+        get
+        {
+            bool fatherStarted = HasContactInfo(_model.Parent.FatherName, _model.Parent.FatherPhone);
+            bool fatherValid = IsCompleteContact(_model.Parent.FatherName, _model.Parent.FatherPhone);
+
+            bool motherStarted = HasContactInfo(_model.Parent.MotherName, _model.Parent.MotherPhone);
+            bool motherValid = IsCompleteContact(_model.Parent.MotherName, _model.Parent.MotherPhone);
+
+            // At least one parent must have full name & valid 10-digit phone
+            if (!fatherValid && !motherValid) return false;
+
+            // If the other parent was started, it must also be valid
+            if (fatherStarted && !fatherValid) return false;
+            if (motherStarted && !motherValid) return false;
+
+            return true;
+        }
+    }
+
+    private bool CanProceedCurrentStep => _currentStep switch
+    {
+        1 => CanProceedStep1,
+        2 => CanProceedStep2,
+        3 => true,
+        _ => true
+    };
+
+    private string GetStepTitle(int step) => step switch
+    {
+        1 => "Student Details",
+        2 => "Parents & Contact",
+        3 => "Review & Save",
+        _ => ""
+    };
+
+    private string GetGradeName(int id) => _grades.FirstOrDefault(g => g.Id == id)?.Name ?? "Standard";
+    private string GetBoardName(int id) => _boards.FirstOrDefault(b => b.Id == id)?.Name ?? "Board";
 
     protected override async Task OnInitializedAsync()
     {
@@ -165,26 +573,22 @@
                     FirstName = s.FirstName,
                     LastName = s.LastName,
                     DateOfBirth = s.DateOfBirth,
-                    Gender = s.Gender,
+                    Gender = s.Gender == Gender.Other ? Gender.Male : s.Gender,
                     BoardId = s.BoardId,
                     GradeId = s.GradeId,
                     SchoolName = s.SchoolName,
                     Address = s.Address,
                     AdmissionDate = s.AdmissionDate,
                     BloodGroup = s.BloodGroup,
-                    MedicalNotes = s.MedicalNotes,
                     PreviousRecords = s.PreviousRecords,
-                    BatchIds = s.BatchIds,
+                    PhotoBase64 = s.PhotoUrl,
+                    BatchIds = new(),
                     Parent = new ParentInfoDto
                     {
                         FatherName = s.Parent.FatherName,
-                        FatherPhone = s.Parent.FatherPhone,
-                        FatherWhatsApp = s.Parent.FatherWhatsApp,
+                        FatherPhone = CleanIndianPhoneNumber(s.Parent.FatherPhone),
                         MotherName = s.Parent.MotherName,
-                        MotherPhone = s.Parent.MotherPhone,
-                        MotherWhatsApp = s.Parent.MotherWhatsApp,
-                        EmergencyContactName = s.Parent.EmergencyContactName,
-                        EmergencyContactPhone = s.Parent.EmergencyContactPhone
+                        MotherPhone = CleanIndianPhoneNumber(s.Parent.MotherPhone)
                     }
                 };
                 _dob = s.DateOfBirth;
@@ -195,6 +599,9 @@
             _model.GradeId = _grades.FirstOrDefault()?.Id ?? 1;
             _model.BoardId = _boards.FirstOrDefault()?.Id ?? 1;
             _dob = DateTime.Today.AddYears(-10);
+
+            // Restore in-progress temporary draft if present
+            await RestoreDraftAsync();
         }
     }
 
@@ -205,29 +612,142 @@
 
         var boardsRes = await ApiService.GetBoardsAsync();
         if (boardsRes?.Success == true && boardsRes.Data != null) _boards = boardsRes.Data;
-
-        var batchesRes = await ApiService.GetBatchesAsync();
-        if (batchesRes?.Success == true && batchesRes.Data != null) _batches = batchesRes.Data;
     }
 
-    private void ToggleBatch(int batchId, bool isSelected)
+    private async Task OnFieldChanged()
     {
-        if (isSelected && !_model.BatchIds.Contains(batchId))
+        await SaveDraftAsync();
+    }
+
+    private async Task GoToStep(int targetStep)
+    {
+        if (targetStep < _currentStep)
         {
-            _model.BatchIds.Add(batchId);
+            _currentStep = targetStep;
         }
-        else if (!isSelected)
+        else if (targetStep > _currentStep)
         {
-            _model.BatchIds.Remove(batchId);
+            if (_currentStep == 1 && !CanProceedStep1)
+            {
+                Snackbar.Add("Please fill in Student Name, Standard, Board, and School Name first.", Severity.Warning);
+                return;
+            }
+            if (_currentStep == 2 && !CanProceedStep2)
+            {
+                Snackbar.Add("Please provide at least one parent's name and valid 10-digit Indian Mobile Number.", Severity.Warning);
+                return;
+            }
+            _currentStep = targetStep;
         }
+
+        await SaveDraftAsync();
+    }
+
+    private async Task NextStep()
+    {
+        if (_currentStep == 1 && !CanProceedStep1)
+        {
+            Snackbar.Add("Please complete all required fields on this step.", Severity.Warning);
+            return;
+        }
+        if (_currentStep == 2 && !CanProceedStep2)
+        {
+            Snackbar.Add("Please enter at least one parent's name and a valid 10-digit Indian Mobile Number.", Severity.Warning);
+            return;
+        }
+
+        if (_currentStep < 3)
+        {
+            _currentStep++;
+            await SaveDraftAsync();
+        }
+    }
+
+    private async Task PrevStep()
+    {
+        if (_currentStep > 1)
+        {
+            _currentStep--;
+            await SaveDraftAsync();
+        }
+    }
+
+    private static readonly System.Text.Json.JsonSerializerOptions _draftJsonOptions = new()
+    {
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
+    };
+
+    private async Task SaveDraftAsync()
+    {
+        if (IsEdit) return;
+        try
+        {
+            if (_dob.HasValue) _model.DateOfBirth = _dob.Value;
+            var draft = new StudentDraftDto
+            {
+                Model = _model,
+                Dob = _dob,
+                Step = _currentStep
+            };
+            var json = System.Text.Json.JsonSerializer.Serialize(draft, _draftJsonOptions);
+            await LocalStorage.SetItemAsync("student_registration_draft", json);
+            _hasDraft = true;
+        }
+        catch { }
+    }
+
+    private async Task RestoreDraftAsync()
+    {
+        if (IsEdit) return;
+        try
+        {
+            var json = await LocalStorage.GetItemAsync("student_registration_draft");
+            if (!string.IsNullOrEmpty(json))
+            {
+                var draft = System.Text.Json.JsonSerializer.Deserialize<StudentDraftDto>(json, _draftJsonOptions);
+                if (draft?.Model != null && !string.IsNullOrWhiteSpace(draft.Model.FirstName))
+                {
+                    _model = draft.Model;
+                    _dob = draft.Dob;
+                    _currentStep = Math.Clamp(draft.Step, 1, 3);
+                    _hasDraft = true;
+                    StateHasChanged();
+                }
+            }
+        }
+        catch
+        {
+            await LocalStorage.RemoveItemAsync("student_registration_draft");
+        }
+    }
+
+    private async Task ClearDraftAsync()
+    {
+        await LocalStorage.RemoveItemAsync("student_registration_draft");
+        _hasDraft = false;
+        _model = new CreateStudentRequest
+        {
+            GradeId = _grades.FirstOrDefault()?.Id ?? 1,
+            BoardId = _boards.FirstOrDefault()?.Id ?? 1
+        };
+        _dob = DateTime.Today.AddYears(-10);
+        _currentStep = 1;
+        Snackbar.Add("Draft cleared.", Severity.Normal);
     }
 
     private async Task SaveStudent()
     {
-        if (string.IsNullOrWhiteSpace(_model.FirstName) || string.IsNullOrWhiteSpace(_model.SchoolName) ||
-            string.IsNullOrWhiteSpace(_model.Parent.FatherName) || string.IsNullOrWhiteSpace(_model.Parent.FatherPhone))
+        if (!CanProceedStep1)
         {
-            Snackbar.Add("Please fill in all required fields (First Name, School, Father Name & Phone).", Severity.Warning);
+            _currentStep = 1;
+            Snackbar.Add("Please complete all required fields on the Student Details step.", Severity.Warning);
+            return;
+        }
+
+        if (!CanProceedStep2)
+        {
+            _currentStep = 2;
+            Snackbar.Add("Please complete at least one parent's name and valid 10-digit Indian Mobile Number.", Severity.Warning);
             return;
         }
 
@@ -245,7 +765,7 @@
                 {
                     Id = StudentId!.Value,
                     FirstName = _model.FirstName,
-                    LastName = _model.LastName,
+                    LastName = "",
                     DateOfBirth = _model.DateOfBirth,
                     Gender = _model.Gender,
                     BoardId = _model.BoardId,
@@ -254,9 +774,9 @@
                     Address = _model.Address,
                     AdmissionDate = _model.AdmissionDate,
                     BloodGroup = _model.BloodGroup,
-                    MedicalNotes = _model.MedicalNotes,
                     PreviousRecords = _model.PreviousRecords,
-                    BatchIds = _model.BatchIds,
+                    PhotoBase64 = _model.PhotoBase64,
+                    BatchIds = new(),
                     Parent = _model.Parent
                 };
 
@@ -273,9 +793,13 @@
             }
             else
             {
+                _model.BatchIds = new();
                 var res = await ApiService.CreateStudentAsync(_model);
                 if (res?.Success == true)
                 {
+                    await LocalStorage.RemoveItemAsync("student_registration_draft");
+                    _hasDraft = false;
+
                     Snackbar.Add("Student registered successfully.", Severity.Success);
                     MudDialog.Close(DialogResult.Ok(true));
                 }
@@ -296,4 +820,11 @@
     }
 
     private void Cancel() => MudDialog.Cancel();
+
+    private class StudentDraftDto
+    {
+        public CreateStudentRequest Model { get; set; } = new();
+        public DateTime? Dob { get; set; }
+        public int Step { get; set; } = 1;
+    }
 }

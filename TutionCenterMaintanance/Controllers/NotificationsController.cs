@@ -89,21 +89,27 @@ public class NotificationsController : ControllerBase
         int alertsCreated = 0;
         var today = DateTime.Today;
 
-        // 1. Check for Overdue Fees
-        var overdueInstallmentsCount = await _context.FeeInstallments
-            .CountAsync(i => i.Status != PaymentStatus.Paid && i.DueDate.Date < today);
+        // 1. Check for Pending Fees this month
+        var startMonth = new DateTime(today.Year, today.Month, 1);
+        var endMonth = startMonth.AddMonths(1).AddTicks(-1);
+        var activeStudents = await _context.Students
+            .Include(s => s.Payments.Where(p => p.PaymentDate >= startMonth && p.PaymentDate <= endMonth))
+            .Where(s => s.IsActive && s.MonthlyFeeAmount > 0)
+            .ToListAsync();
 
-        if (overdueInstallmentsCount > 0)
+        var pendingCount = activeStudents.Count(s => s.Payments.Sum(p => p.Amount) < s.MonthlyFeeAmount);
+
+        if (pendingCount > 0)
         {
             var alreadyNotifiedToday = await _context.Notifications
-                .AnyAsync(n => n.Type == "Warning" && n.Title.Contains("Overdue") && n.CreatedAt.Date == today);
+                .AnyAsync(n => n.Type == "Warning" && n.Title.Contains("Fee") && n.CreatedAt.Date == today);
 
             if (!alreadyNotifiedToday)
             {
                 _context.Notifications.Add(new Notification
                 {
-                    Title = "Tuition Fee Overdue Alert",
-                    Message = $"{overdueInstallmentsCount} fee installment(s) are currently overdue. Please review and send WhatsApp reminders.",
+                    Title = "Monthly Fee Collection Alert",
+                    Message = $"{pendingCount} student(s) have pending fees for this month.",
                     Type = "Warning",
                     CreatedAt = DateTime.UtcNow
                 });

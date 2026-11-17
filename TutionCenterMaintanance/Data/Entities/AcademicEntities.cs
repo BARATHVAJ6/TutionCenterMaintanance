@@ -19,7 +19,6 @@ public class Grade : BaseEntity
     public ICollection<BoardGradeSubject> BoardGradeSubjects { get; set; } = new List<BoardGradeSubject>();
     public ICollection<Student> Students { get; set; } = new List<Student>();
     public ICollection<Batch> Batches { get; set; } = new List<Batch>();
-    public ICollection<FeePlan> FeePlans { get; set; } = new List<FeePlan>();
 }
 
 public class Subject : BaseEntity

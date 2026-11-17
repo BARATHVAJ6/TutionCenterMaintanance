@@ -209,3 +209,29 @@ public class GradeFinancialSummaryDto
     public int DefaulterCount { get; set; }
     public decimal CollectionRate => TotalExpected > 0 ? Math.Round((TotalCollected / TotalExpected) * 100, 1) : 0;
 }
+
+public class StudentMonthlyStatusDto
+{
+    public int StudentId { get; set; }
+    public string StudentName { get; set; } = string.Empty;
+    public string GradeName { get; set; } = string.Empty;
+    public string BoardName { get; set; } = string.Empty;
+    public string ParentName { get; set; } = string.Empty;
+    public string PrimaryPhone { get; set; } = string.Empty;
+    public string? PhotoUrl { get; set; }
+    public decimal MonthlyFeeAmount { get; set; }
+    public decimal PaidAmount { get; set; }
+    public decimal RemainingAmount => Math.Max(0, MonthlyFeeAmount - PaidAmount);
+    public PaymentStatus Status { get; set; } // Paid, Pending (Unpaid), PartiallyPaid
+    public DateTime? LastPaymentDate { get; set; }
+    public int PaymentCount { get; set; }
+    public int Month { get; set; }
+    public int Year { get; set; }
+}
+
+public class SetMonthlyFeeRequest
+{
+    public int StudentId { get; set; }
+    [Range(0, 1000000)]
+    public decimal MonthlyFeeAmount { get; set; }
+}

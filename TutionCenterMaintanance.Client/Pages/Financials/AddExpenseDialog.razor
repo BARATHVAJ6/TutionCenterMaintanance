@@ -1,0 +1,142 @@
+@inject IApiService ApiService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <div style="width: 36px; height: 36px; border-radius: 10px; background-color: var(--color-error-soft); display: flex; align-items: center; justify-content: center;">
+                <MudIcon Icon="@Icons.Material.Filled.ReceiptLong" Style="color: var(--color-error); font-size: 20px;" />
+            </div>
+            <div>
+                <MudText Typo="Typo.h6" Class="fw-bold">Record Center Expense</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Manual expense entry for center operations</MudText>
+            </div>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="2">
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_model.Title"
+                              Label="Expense Title *"
+                              Placeholder="e.g. Monthly Rent, EB Bill, Staff Salary"
+                              Required="true"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense" />
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudSelect T="ExpenseCategory"
+                           @bind-Value="_model.Category"
+                           Label="Category *"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense">
+                    <MudSelectItem Value="ExpenseCategory.Rent">Rent</MudSelectItem>
+                    <MudSelectItem Value="ExpenseCategory.Electricity">Electricity</MudSelectItem>
+                    <MudSelectItem Value="ExpenseCategory.WaterBill">Water Bill</MudSelectItem>
+                    <MudSelectItem Value="ExpenseCategory.Salary">Staff Salary</MudSelectItem>
+                    <MudSelectItem Value="ExpenseCategory.Maintenance">Repairs & Maintenance</MudSelectItem>
+                    <MudSelectItem Value="ExpenseCategory.Equipment">Equipment & Furniture</MudSelectItem>
+                    <MudSelectItem Value="ExpenseCategory.Internet">Internet / Wi-Fi</MudSelectItem>
+                    <MudSelectItem Value="ExpenseCategory.Miscellaneous">Miscellaneous</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudNumericField T="decimal"
+                                 @bind-Value="_model.Amount"
+                                 Label="Amount (₹) *"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 Min="1"
+                                 Step="50" />
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudDatePicker @bind-Date="_date"
+                               Label="Expense Date *"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               MaxDate="DateTime.Today" />
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="_model.PaidTo"
+                              Label="Paid To (Optional)"
+                              Placeholder="e.g. Landlord, TNEB, Tutor Name"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense" />
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_model.Notes"
+                              Label="Description / Notes (Optional)"
+                              Placeholder="Any additional details or receipt bill number"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Lines="2" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Error"
+                   Variant="Variant.Filled"
+                   OnClick="Save"
+                   Disabled="_saving || string.IsNullOrWhiteSpace(_model.Title) || _model.Amount <= 0">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Record Expense</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private CreateExpenseRequest _model = new();
+    private DateTime? _date = DateTime.Today;
+    private bool _saving = false;
+
+    private async Task Save()
+    {
+        if (string.IsNullOrWhiteSpace(_model.Title) || _model.Amount <= 0)
+        {
+            Snackbar.Add("Please enter title and a valid amount.", Severity.Warning);
+            return;
+        }
+
+        _model.Date = _date ?? DateTime.Today;
+        _saving = true;
+
+        try
+        {
+            var res = await ApiService.CreateExpenseAsync(_model);
+            if (res?.Success == true)
+            {
+                Snackbar.Add($"Expense '{_model.Title}' of ₹{_model.Amount:N0} recorded!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to save expense.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}
