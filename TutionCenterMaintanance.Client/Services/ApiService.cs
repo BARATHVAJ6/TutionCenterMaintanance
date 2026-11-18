@@ -104,7 +104,7 @@ public interface IApiService
     Task<ApiResponse<List<GradeFinancialSummaryDto>>?> GetGradeFinancialSummariesAsync();
 
     // Expenses
-    Task<ApiResponse<List<ExpenseDto>>?> GetExpensesAsync(int? month = null, int? year = null, ExpenseCategory? category = null);
+    Task<ApiResponse<PaginatedResult<ExpenseDto>>?> GetExpensesAsync(int? month = null, int? year = null, ExpenseCategory? category = null, int page = 1, int pageSize = 25, CancellationToken ct = default);
     Task<ApiResponse<ExpenseDto>?> CreateExpenseAsync(CreateExpenseRequest request);
     Task<ApiResponse<bool>?> DeleteExpenseAsync(int id);
 
@@ -113,10 +113,10 @@ public interface IApiService
     Task<ApiResponse<StationeryItemDto>?> CreateStationeryItemAsync(CreateStationeryItemRequest request);
     Task<ApiResponse<bool>?> UpdateStationeryItemAsync(int id, UpdateStationeryItemRequest request);
     Task<ApiResponse<bool>?> DeleteStationeryItemAsync(int id);
-    Task<ApiResponse<List<StationeryPurchaseDto>>?> GetStationeryPurchasesAsync(int? month = null, int? year = null);
+    Task<ApiResponse<PaginatedResult<StationeryPurchaseDto>>?> GetStationeryPurchasesAsync(int? month = null, int? year = null, int page = 1, int pageSize = 25, CancellationToken ct = default);
     Task<ApiResponse<StationeryPurchaseDto>?> RecordStationeryPurchaseAsync(RecordStationeryPurchaseRequest request);
     Task<ApiResponse<bool>?> DeleteStationeryPurchaseAsync(int id);
-    Task<ApiResponse<List<StationerySaleDto>>?> GetStationerySalesAsync(int? month = null, int? year = null);
+    Task<ApiResponse<PaginatedResult<StationerySaleDto>>?> GetStationerySalesAsync(int? month = null, int? year = null, int? studentId = null, int page = 1, int pageSize = 25, CancellationToken ct = default);
     Task<ApiResponse<StationerySaleDto>?> RecordStationerySaleAsync(RecordStationerySaleRequest request);
     Task<ApiResponse<bool>?> DeleteStationerySaleAsync(int id);
     Task<ApiResponse<bool>?> AdjustStationeryStockAsync(QuickStockAdjustmentRequest request);
@@ -613,10 +613,16 @@ public class ApiService : IApiService
     }
 
     // Expenses
-    public async Task<ApiResponse<List<ExpenseDto>>?> GetExpensesAsync(int? month = null, int? year = null, ExpenseCategory? category = null)
+    public async Task<ApiResponse<PaginatedResult<ExpenseDto>>?> GetExpensesAsync(
+        int? month = null,
+        int? year = null,
+        ExpenseCategory? category = null,
+        int page = 1,
+        int pageSize = 25,
+        CancellationToken ct = default)
     {
         await EnsureAuthHeaderAsync();
-        return await _http.GetFromJsonAsync<ApiResponse<List<ExpenseDto>>>($"api/Expenses?month={month}&year={year}&category={category}");
+        return await _http.GetFromJsonAsync<ApiResponse<PaginatedResult<ExpenseDto>>>($"api/Expenses?month={month}&year={year}&category={category}&page={page}&pageSize={pageSize}", ct);
     }
 
     public async Task<ApiResponse<ExpenseDto>?> CreateExpenseAsync(CreateExpenseRequest request)
@@ -661,10 +667,15 @@ public class ApiService : IApiService
         return await res.Content.ReadFromJsonAsync<ApiResponse<bool>>();
     }
 
-    public async Task<ApiResponse<List<StationeryPurchaseDto>>?> GetStationeryPurchasesAsync(int? month = null, int? year = null)
+    public async Task<ApiResponse<PaginatedResult<StationeryPurchaseDto>>?> GetStationeryPurchasesAsync(
+        int? month = null,
+        int? year = null,
+        int page = 1,
+        int pageSize = 25,
+        CancellationToken ct = default)
     {
         await EnsureAuthHeaderAsync();
-        return await _http.GetFromJsonAsync<ApiResponse<List<StationeryPurchaseDto>>>($"api/Stationery/purchases?month={month}&year={year}");
+        return await _http.GetFromJsonAsync<ApiResponse<PaginatedResult<StationeryPurchaseDto>>>($"api/Stationery/purchases?month={month}&year={year}&page={page}&pageSize={pageSize}", ct);
     }
 
     public async Task<ApiResponse<StationeryPurchaseDto>?> RecordStationeryPurchaseAsync(RecordStationeryPurchaseRequest request)
@@ -681,10 +692,16 @@ public class ApiService : IApiService
         return await res.Content.ReadFromJsonAsync<ApiResponse<bool>>();
     }
 
-    public async Task<ApiResponse<List<StationerySaleDto>>?> GetStationerySalesAsync(int? month = null, int? year = null)
+    public async Task<ApiResponse<PaginatedResult<StationerySaleDto>>?> GetStationerySalesAsync(
+        int? month = null,
+        int? year = null,
+        int? studentId = null,
+        int page = 1,
+        int pageSize = 25,
+        CancellationToken ct = default)
     {
         await EnsureAuthHeaderAsync();
-        return await _http.GetFromJsonAsync<ApiResponse<List<StationerySaleDto>>>($"api/Stationery/sales?month={month}&year={year}");
+        return await _http.GetFromJsonAsync<ApiResponse<PaginatedResult<StationerySaleDto>>>($"api/Stationery/sales?month={month}&year={year}&studentId={studentId}&page={page}&pageSize={pageSize}", ct);
     }
 
     public async Task<ApiResponse<StationerySaleDto>?> RecordStationerySaleAsync(RecordStationerySaleRequest request)

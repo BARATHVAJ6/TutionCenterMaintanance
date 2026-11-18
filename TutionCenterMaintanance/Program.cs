@@ -11,6 +11,7 @@ using TutionCenterMaintanance.Data;
 using TutionCenterMaintanance.Data.Entities;
 using TutionCenterMaintanance.Infrastructure;
 using TutionCenterMaintanance.Services;
+using TutionCenterMaintanance.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -63,6 +64,10 @@ builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler
 
 // 5. App Services
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IStudentService, StudentService>();
+builder.Services.AddScoped<IFeesService, FeesService>();
+builder.Services.AddScoped<IExpensesService, ExpensesService>();
+builder.Services.AddScoped<IStationeryService, StationeryService>();
 builder.Services.AddMudServices();
 
 // 6. Controllers & JSON Options
@@ -110,6 +115,33 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+
+// Global API Exception Handler returning RFC 7807 ProblemDetails for API requests
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (Exception ex) when (context.Request.Path.StartsWithSegments("/api"))
+    {
+        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Unhandled API exception on {Path}", context.Request.Path);
+
+        context.Response.ContentType = "application/problem+json";
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+
+        var problemDetails = new Microsoft.AspNetCore.Mvc.ProblemDetails
+        {
+            Status = StatusCodes.Status500InternalServerError,
+            Title = "An unexpected error occurred while processing your request.",
+            Detail = app.Environment.IsDevelopment() ? ex.Message : "Please contact the system administrator.",
+            Instance = context.Request.Path
+        };
+
+        await context.Response.WriteAsJsonAsync(problemDetails);
+    }
+});
 
 app.UseAuthentication();
 app.UseAuthorization();

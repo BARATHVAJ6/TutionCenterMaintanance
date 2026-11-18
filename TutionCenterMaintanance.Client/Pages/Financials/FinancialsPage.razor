@@ -757,7 +757,7 @@
             var res = await ApiService.GetExpensesAsync(_selectedDate.Month, _selectedDate.Year, _selectedExpenseCategory);
             if (res?.Success == true && res.Data != null)
             {
-                _expenses = res.Data;
+                _expenses = res.Data.Items;
             }
         }
         catch (Exception ex)
@@ -784,7 +784,7 @@
             var salesRes = await ApiService.GetStationerySalesAsync();
             if (salesRes?.Success == true && salesRes.Data != null)
             {
-                _recentSales = salesRes.Data.Take(15).ToList();
+                _recentSales = salesRes.Data.Items.Take(15).ToList();
             }
         }
         catch (Exception ex)

@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="TutionCenterMaintanance.Tests/TutionCenterMaintanance.Tests.csproj" />
   <Project Path="TutionCenterMaintanance/TutionCenterMaintanance.csproj" />
   <Project Path="TutionCenterMaintanance.Client/TutionCenterMaintanance.Client.csproj" />
   <Project Path="TutionCenterMaintanance.Shared/TutionCenterMaintanance.Shared.csproj" />

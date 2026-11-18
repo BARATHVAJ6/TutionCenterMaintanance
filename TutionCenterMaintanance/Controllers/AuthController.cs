@@ -89,7 +89,7 @@ public class AuthController : ControllerBase
             var roles = await _userManager.GetRolesAsync(user);
             var roleName = roles.FirstOrDefault() ?? "SubAdmin";
             var permissions = await _context.RolePermissions
-                .Where(rp => roles.Contains(rp.Role.Name))
+                .Where(rp => rp.Role.Name != null && roles.Contains(rp.Role.Name))
                 .Select(rp => rp.Permission)
                 .Distinct()
                 .ToListAsync();

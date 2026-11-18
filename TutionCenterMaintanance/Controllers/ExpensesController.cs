@@ -1,9 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TutionCenterMaintanance.Data;
-using TutionCenterMaintanance.Data.Entities;
+using TutionCenterMaintanance.Services.Interfaces;
 using TutionCenterMaintanance.Shared.Constants;
 using TutionCenterMaintanance.Shared.DTOs.Expenses;
 using TutionCenterMaintanance.Shared.Enums;
@@ -16,65 +14,36 @@ namespace TutionCenterMaintanance.Controllers;
 [Authorize]
 public class ExpensesController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly IExpensesService _expensesService;
 
-    public ExpensesController(AppDbContext context)
+    public ExpensesController(IExpensesService expensesService)
     {
-        _context = context;
+        _expensesService = expensesService;
     }
 
     [HttpGet]
     [Authorize(Policy = Permissions.FeesView)]
-    public async Task<ActionResult<ApiResponse<List<ExpenseDto>>>> GetExpenses(
+    public async Task<ActionResult<ApiResponse<PaginatedResult<ExpenseDto>>>> GetExpenses(
         [FromQuery] int? month = null,
         [FromQuery] int? year = null,
-        [FromQuery] ExpenseCategory? category = null)
+        [FromQuery] ExpenseCategory? category = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 25,
+        CancellationToken ct = default)
     {
-        var query = _context.Expenses
-            .Include(e => e.RecordedByUser)
-            .AsQueryable();
-
-        if (month.HasValue && year.HasValue)
-        {
-            var start = new DateTime(year.Value, month.Value, 1);
-            var end = start.AddMonths(1).AddTicks(-1);
-            query = query.Where(e => e.Date >= start && e.Date <= end);
-        }
-        else if (year.HasValue)
-        {
-            var start = new DateTime(year.Value, 1, 1);
-            var end = new DateTime(year.Value, 12, 31, 23, 59, 59);
-            query = query.Where(e => e.Date >= start && e.Date <= end);
-        }
-
-        if (category.HasValue)
-        {
-            query = query.Where(e => e.Category == category.Value);
-        }
-
-        var expenses = await query
-            .OrderByDescending(e => e.Date)
-            .ThenByDescending(e => e.Id)
-            .Select(e => new ExpenseDto
-            {
-                Id = e.Id,
-                Title = e.Title,
-                Category = e.Category,
-                Amount = e.Amount,
-                Date = e.Date,
-                PaidTo = e.PaidTo,
-                Notes = e.Notes,
-                RecordedByName = e.RecordedByUser != null ? e.RecordedByUser.FullName : "Admin"
-            })
-            .ToListAsync();
-
-        return Ok(ApiResponse<List<ExpenseDto>>.Ok(expenses));
+        var result = await _expensesService.GetExpensesAsync(month, year, category, page, pageSize, ct);
+        return Ok(ApiResponse<PaginatedResult<ExpenseDto>>.Ok(result));
     }
 
     [HttpPost]
     [Authorize(Policy = Permissions.FeesManage)]
-    public async Task<ActionResult<ApiResponse<ExpenseDto>>> CreateExpense([FromBody] CreateExpenseRequest request)
+    public async Task<ActionResult<ApiResponse<ExpenseDto>>> CreateExpense(
+        [FromBody] CreateExpenseRequest request,
+        CancellationToken ct = default)
     {
+        if (!ModelState.IsValid)
+            return BadRequest(ApiResponse<ExpenseDto>.Fail("Invalid expense data."));
+
         if (request.Amount <= 0)
             return BadRequest(ApiResponse<ExpenseDto>.Fail("Amount must be greater than zero."));
 
@@ -82,48 +51,18 @@ public class ExpensesController : ControllerBase
             return BadRequest(ApiResponse<ExpenseDto>.Fail("Expense title is required."));
 
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var expense = await _expensesService.CreateExpenseAsync(request, currentUserId, ct);
 
-        var expense = new Expense
-        {
-            Title = request.Title.Trim(),
-            Category = request.Category,
-            Amount = request.Amount,
-            Date = request.Date.Date != default ? request.Date : DateTime.Today,
-            PaidTo = request.PaidTo?.Trim(),
-            Notes = request.Notes?.Trim(),
-            RecordedByUserId = currentUserId,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        _context.Expenses.Add(expense);
-        await _context.SaveChangesAsync();
-
-        var dto = new ExpenseDto
-        {
-            Id = expense.Id,
-            Title = expense.Title,
-            Category = expense.Category,
-            Amount = expense.Amount,
-            Date = expense.Date,
-            PaidTo = expense.PaidTo,
-            Notes = expense.Notes,
-            RecordedByName = User.Identity?.Name ?? "Admin"
-        };
-
-        return Ok(ApiResponse<ExpenseDto>.Ok(dto, "Expense recorded successfully"));
+        return CreatedAtAction(nameof(GetExpenses), new { id = expense.Id }, ApiResponse<ExpenseDto>.Ok(expense, "Expense recorded successfully"));
     }
 
     [HttpDelete("{id}")]
     [Authorize(Policy = Permissions.FeesManage)]
-    public async Task<ActionResult<ApiResponse<bool>>> DeleteExpense(int id)
+    public async Task<ActionResult<ApiResponse<bool>>> DeleteExpense(int id, CancellationToken ct = default)
     {
-        var expense = await _context.Expenses.FindAsync(id);
-        if (expense == null)
+        var deleted = await _expensesService.DeleteExpenseAsync(id, ct);
+        if (!deleted)
             return NotFound(ApiResponse<bool>.Fail("Expense not found"));
-
-        expense.IsDeleted = true;
-        expense.ModifiedAt = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
 
         return Ok(ApiResponse<bool>.Ok(true, "Expense deleted successfully"));
     }

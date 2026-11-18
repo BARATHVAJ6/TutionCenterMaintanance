@@ -190,23 +190,15 @@
 <!-- Students Fee Table -->
 <div class="rounded-xl overflow-hidden"
      style="background-color: var(--color-surface); border: 1px solid var(--color-rule); box-shadow: var(--shadow-sm);">
-    @if (_loading)
-    {
-        <div class="pa-8 text-center">
-            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-            <div class="mt-2" style="font-size: 0.85rem; color: var(--color-ink-muted);">Loading student fee records...</div>
-        </div>
-    }
-    else if (!FilteredStudents.Any())
-    {
-        <div class="pa-10 text-center">
-            <MudIcon Icon="@Icons.Material.Outlined.SearchOff" Style="font-size: 40px; color: var(--color-ink-muted);" />
-            <div class="mt-2" style="font-weight: 600; color: var(--color-ink);">No student fee records found</div>
-            <div style="font-size: 0.85rem; color: var(--color-ink-secondary);">Try adjusting your search or standard filter</div>
-        </div>
-    }
-    else
-    {
+    <UiStateContainer Loading="_loading"
+                      LoadingText="Loading student fee records..."
+                      ErrorMessage="@_loadError"
+                      ErrorTitle="Unable to load fees"
+                      OnRetry="LoadData"
+                      IsEmpty="!FilteredStudents.Any()"
+                      EmptyTitle="No student fee records found"
+                      EmptyMessage="Try adjusting your search query or standard filter."
+                      EmptyIcon="@Icons.Material.Outlined.SearchOff">
         <MudTable Items="@FilteredStudents" Dense="true" Hover="true" Elevation="0" Class="modular-table">
             <HeaderContent>
                 <MudTh>Student</MudTh>
@@ -218,6 +210,7 @@
                 <MudTh Style="text-align: right;">Actions</MudTh>
             </HeaderContent>
             <RowTemplate>
+                <div @key="context.StudentId" style="display: contents;">
                 <!-- Student Name & Avatar -->
                 <MudTd DataLabel="Student">
                     <div class="d-flex align-center gap-3">
@@ -376,9 +369,10 @@
                         }
                     </div>
                 </MudTd>
+                </div>
             </RowTemplate>
         </MudTable>
-    }
+    </UiStateContainer>
 </div>
 
 @code {
@@ -389,6 +383,7 @@
     private string _selectedStatusFilter = "All";
     private string _searchQuery = string.Empty;
     private bool _loading = true;
+    private string? _loadError = null;
 
     private int _totalStudentsCount => _students.Count;
     private int _paidStudentsCount => _students.Count(s => s.Status == PaymentStatus.Paid);
@@ -450,6 +445,7 @@
     private async Task LoadData()
     {
         _loading = true;
+        _loadError = null;
         try
         {
             var res = await ApiService.GetMonthlyStatusAsync(
@@ -464,10 +460,15 @@
             else
             {
                 _students = new();
+                if (res != null && !res.Success && !string.IsNullOrWhiteSpace(res.Message))
+                {
+                    _loadError = res.Message;
+                }
             }
         }
         catch (Exception ex)
         {
+            _loadError = ex.Message;
             Snackbar.Add($"Error loading fees: {ex.Message}", Severity.Error);
         }
         finally

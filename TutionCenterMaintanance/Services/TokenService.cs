@@ -34,7 +34,7 @@ public class TokenService : ITokenService
         var primaryRole = roles.FirstOrDefault() ?? "SubAdmin";
 
         var permissions = await _context.RolePermissions
-            .Where(rp => roles.Contains(rp.Role.Name))
+            .Where(rp => rp.Role.Name != null && roles.Contains(rp.Role.Name))
             .Select(rp => rp.Permission)
             .Distinct()
             .ToListAsync();

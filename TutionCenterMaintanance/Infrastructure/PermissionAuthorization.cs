@@ -50,7 +50,7 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var hasPermission = await dbContext.RolePermissions
-            .AnyAsync(rp => roleClaims.Contains(rp.Role.Name) && rp.Permission == requirement.Permission);
+            .AnyAsync(rp => rp.Role.Name != null && roleClaims.Contains(rp.Role.Name) && rp.Permission == requirement.Permission);
 
         if (hasPermission)
         {
